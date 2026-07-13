@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 2 — Embeddings &amp; Vector Databases | GenAI Foundations</title>
+<meta name="description" content="Week 6, Class 2: what embeddings are, measuring similarity, and vector database options.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Source+Sans+3:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 6 THEME — THE CARD CATALOG / STACKS
+   =========================================== */
+:root{
+  --bg:#F1E7D0;
+  --forest:#2F5233;
+  --brass:#B08D57;
+  --ink:#2B1D14;
+  --card:#FBF4E2;
+  --wrong:#8A2E2E;
+  --stage-bg: var(--forest);
+  --slide-bg: var(--bg);
+  --font-display:'Libre Caslon Display', serif;
+  --font-body:'Source Sans 3', sans-serif;
+  --font-mono:'Courier Prime', monospace;
+}
+*{box-sizing:border-box;}
+body{ font-family:var(--font-body); }
+.slide{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background-color:var(--bg);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 63px, rgba(176,141,87,.18) 63px, rgba(176,141,87,.18) 64px);
+}
+
+.card-edge{ position:absolute; inset:40px; border:3px solid var(--ink); pointer-events:none; z-index:2; box-shadow: inset 0 0 0 1px rgba(43,29,20,.10); }
+.punch{ position:absolute; top:25px; width:30px; height:30px; border-radius:50%; background:var(--ink); z-index:3; box-shadow: inset 0 2px 3px rgba(0,0,0,.55), 0 0 0 4px var(--bg), 0 0 0 6px var(--brass); }
+.punch.l{ left:calc(50% - 130px); }
+.punch.r{ left:calc(50% + 100px); }
+.tab{ position:absolute; top:8px; right:96px; background:var(--brass); color:var(--ink); font-family:var(--font-mono); font-weight:700; font-size:19px; letter-spacing:.05em; padding:9px 20px 10px; border:2px solid var(--ink); border-bottom:none; z-index:4; }
+.stamp{ position:absolute; right:96px; bottom:66px; width:230px; padding:14px 8px; border:4px double var(--forest); border-radius:10px; text-align:center; transform:rotate(-11deg); color:var(--forest); font-family:var(--font-mono); font-weight:700; letter-spacing:.14em; font-size:19px; opacity:.30; z-index:3; pointer-events:none; text-transform:uppercase; line-height:1.5;}
+
+.content{ position:absolute; left:132px; right:132px; top:150px; bottom:96px; z-index:4; display:flex; flex-direction:column; }
+.kicker{ font-family:var(--font-mono); font-size:21px; letter-spacing:.24em; text-transform:uppercase; color:var(--forest); margin-bottom:16px; font-weight:700; }
+.slide-title{ font-family:var(--font-display); font-size:60px; color:var(--ink); line-height:1.16; margin-bottom:6px; }
+.slide-sub{ font-family:var(--font-body); font-size:25px; color:var(--forest); font-weight:600; margin-bottom:8px; }
+.rule{ width:120px; height:3px; background:var(--brass); margin:22px 0 30px; }
+
+.bullets{ list-style:none; display:flex; flex-direction:column; gap:20px; }
+.bullets li{ font-size:31px; line-height:1.48; padding-left:44px; position:relative; }
+.bullets li::before{ content:"◆"; position:absolute; left:0; top:3px; color:var(--brass); font-size:22px; }
+.bullets.small li{ font-size:26px; }
+.bullets.tight li{ font-size:27px; }
+
+.card-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:26px; }
+.card-grid.cols-3{ grid-template-columns:repeat(3,1fr); gap:22px; }
+.card{ background:rgba(255,255,255,.4); border:2px solid var(--forest); border-radius:6px; padding:26px 30px; }
+.card-grid.cols-3 .card{ padding:22px 22px; }
+.card h3{ font-family:var(--font-display); font-size:30px; color:var(--forest); margin:0 0 14px; }
+.card-grid.cols-3 .card h3{ font-size:27px; }
+.card ul{ list-style:none; display:flex; flex-direction:column; gap:10px; }
+.card ul li{ font-size:22px; line-height:1.4; padding-left:26px; position:relative; }
+.card-grid.cols-3 .card ul li{ font-size:20px; }
+.card ul li::before{ content:"–"; position:absolute; left:0; color:var(--brass); }
+.card p{ font-size:22px; line-height:1.45; }
+
+.two-col{ display:flex; gap:56px; align-items:center; flex:1; }
+.two-col .text-side{ flex:1.15; }
+.two-col .graphic-side{ flex:1; display:flex; align-items:center; justify-content:center; }
+.vector-scatter{ width:100%; max-width:540px; height:auto; }
+
+.title-slide .content{ justify-content:center; align-items:flex-start; top:0; bottom:0; }
+.catalog-meta{ margin-top:38px; font-family:var(--font-mono); font-size:20px; color:var(--forest); border-top:2px solid var(--brass); border-bottom:2px solid var(--brass); padding:16px 0; letter-spacing:.02em; }
+.catalog-meta div{ margin:4px 0; }
+.title-big{ font-family:var(--font-display); font-size:92px; line-height:1.1; color:var(--ink); max-width:1550px; }
+.title-kicker{ font-family:var(--font-mono); font-size:24px; letter-spacing:.3em; text-transform:uppercase; color:var(--forest); margin-bottom:26px; font-weight:700; }
+
+.agenda-list{ list-style:none; display:flex; flex-direction:column; gap:22px; counter-reset:agenda; }
+.agenda-list li{ counter-increment:agenda; font-size:32px; display:flex; align-items:baseline; gap:22px; padding:14px 22px; background:rgba(255,255,255,.35); border-left:5px solid var(--brass); border-radius:2px; }
+.agenda-list li::before{ content:counter(agenda,decimal-leading-zero); font-family:var(--font-mono); font-weight:700; color:var(--forest); font-size:26px; }
+
+.pitfall-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:22px; }
+.pitfall{ background:rgba(255,255,255,.4); border:2px solid var(--ink); border-radius:6px; padding:20px 24px; }
+.pitfall h4{ font-family:var(--font-mono); font-size:20px; color:var(--wrong); text-transform:uppercase; letter-spacing:.03em; margin:0 0 8px; }
+.pitfall p{ font-size:21px; line-height:1.4; margin:0; }
+
+.challenge-list{ list-style:none; display:flex; flex-direction:column; gap:16px; }
+.challenge-list li{ font-size:27px; padding:12px 20px; border:1px solid var(--brass); border-radius:4px; background:rgba(255,255,255,.3); }
+.challenge-list .num{ font-family:var(--font-mono); color:var(--forest); font-weight:700; margin-right:14px; }
+
+.next-box{ margin-top:30px; padding:28px 34px; border:3px solid var(--forest); border-radius:8px; background:rgba(255,255,255,.4); max-width:1300px; }
+.next-box p{ font-size:26px; line-height:1.5; }
+.next-callno{ font-family:var(--font-mono); font-size:20px; color:var(--brass); margin-top:16px; letter-spacing:.05em; }
+
+.code-block{ background:#FBF6E9; border:2px solid var(--ink); border-radius:4px; padding:20px 26px; font-family:var(--font-mono); font-size:22px; line-height:1.55; color:var(--ink); white-space:pre-wrap; margin-top:12px; }
+
+.rank-list{ display:flex; flex-direction:column; border-top:2px solid var(--ink); }
+.rank-row{ display:flex; align-items:center; gap:20px; padding:16px 8px; border-bottom:1px dotted var(--brass); }
+.rank-row.best{ background:rgba(47,82,51,.12); border-left:6px solid var(--forest); padding-left:16px; }
+.rank-score{ font-family:var(--font-mono); font-weight:700; width:96px; text-align:right; font-size:22px; color:var(--forest); }
+.rank-text{ flex:1; font-size:23px; }
+.rank-text .q{ font-family:var(--font-mono); font-size:19px; color:var(--brass); display:block; margin-top:2px; }
+.rank-bar-wrap{ width:220px; height:16px; background:rgba(0,0,0,.09); border-radius:8px; overflow:hidden; }
+.rank-bar{ height:100%; background:var(--forest); }
+
+.top-links{ position:fixed; top:18px; right:22px; z-index:1000; display:flex; gap:12px; }
+.top-links a{ font-family:var(--font-mono); font-size:14px; color:var(--bg); background:var(--forest); padding:9px 16px; border-radius:4px; text-decoration:none; letter-spacing:.04em; border:1px solid var(--brass); }
+.deck-controls-inner{ display:flex; align-items:center; gap:18px; background:var(--ink); color:var(--bg); font-family:var(--font-mono); font-size:15px; padding:10px 24px; border-radius:30px; letter-spacing:.04em; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+#slideCounter{ font-weight:700; color:var(--brass); }
+.breadcrumb{ opacity:.85; }
+.nav-btn{ position:fixed; bottom:24px; z-index:1000; font-family:var(--font-mono); font-size:15px; text-decoration:none; background:var(--forest); color:var(--bg); padding:12px 20px; border-radius:6px; letter-spacing:.03em; box-shadow:0 3px 0 rgba(0,0,0,.25); border:1px solid var(--brass); }
+.nav-btn.prev{ left:24px; } .nav-btn.next{ right:24px; }
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--forest); outline-offset: 4px; }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <section class="slide title-slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="title-kicker" data-editable>Week 6 · The Card Catalog</div>
+        <h1 class="title-big" data-editable>Embeddings &amp; Vector Databases</h1>
+        <div class="catalog-meta">
+          <div data-editable>CALL NO. &nbsp;RAG 006.3 — CLASS 2 OF 3</div>
+          <div data-editable>SUBJECT &nbsp;Measuring Meaning as Distance</div>
+          <div data-editable>STATUS &nbsp;Available for Check-Out</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2: AGENDA -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Today's Call Slip</div>
+        <h2 class="slide-title" data-editable>What We're Checking Out Today</h2>
+        <div class="rule"></div>
+        <ol class="agenda-list">
+          <li data-editable>What is an embedding, really?</li>
+          <li data-editable>Vector space: meaning as geometry</li>
+          <li data-editable>Measuring similarity with cosine distance</li>
+          <li data-editable>Semantic search vs. keyword search</li>
+          <li data-editable>Vector databases &amp; a live nearest-match demo</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 3: CONCEPT — What is an embedding -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>What Is an Embedding, Really?</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable>An embedding is a list of numbers — a <em>vector</em> — that represents the meaning of a piece of text.</li>
+          <li data-editable>Produced by a trained embedding model: text goes in, a vector comes out.</li>
+          <li data-editable>Texts with similar meaning end up with vectors that sit close together in that numeric space.</li>
+          <li data-editable>"Dog" and "puppy" land near each other. "Dog" and "stock market" land far apart.</li>
+          <li data-editable>Real embedding models use hundreds or thousands of dimensions — far more than we can draw, but the same idea.</li>
+          <li data-editable>Embeddings turn "does this mean the same thing?" into a math problem: how close are two points?</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4: CONCEPT — Vector space intuition -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Vector Space: Meaning as Geometry</h2>
+        <div class="rule"></div>
+        <div class="two-col">
+          <div class="text-side">
+            <ul class="bullets tight">
+              <li data-editable>Picture every document and every query as a dot in space.</li>
+              <li data-editable>Related topics cluster together — the same way a library groups related books on a shelf.</li>
+              <li data-editable>A new question becomes its own dot the instant it's embedded.</li>
+              <li data-editable>The nearest dots are its <strong>nearest neighbors</strong> — the most relevant chunks to retrieve.</li>
+              <li data-editable>We can only draw 2 dimensions here; real models use hundreds. The geometry is identical.</li>
+            </ul>
+          </div>
+          <div class="graphic-side">
+            <svg class="vector-scatter" viewBox="0 0 420 320" xmlns="http://www.w3.org/2000/svg">
+              <line x1="20" y1="300" x2="400" y2="300" stroke="#B08D57" stroke-width="1.5" opacity=".5"/>
+              <line x1="20" y1="20" x2="20" y2="300" stroke="#B08D57" stroke-width="1.5" opacity=".5"/>
+              <circle cx="220" cy="50" r="7" fill="#B08D57" opacity=".55"/>
+              <circle cx="360" cy="90" r="7" fill="#B08D57" opacity=".55"/>
+              <circle cx="60" cy="240" r="7" fill="#B08D57" opacity=".55"/>
+              <circle cx="330" cy="255" r="7" fill="#B08D57" opacity=".55"/>
+              <circle cx="150" cy="270" r="7" fill="#B08D57" opacity=".55"/>
+              <circle cx="240" cy="150" r="8" fill="#2F5233"/>
+              <circle cx="270" cy="130" r="8" fill="#2F5233"/>
+              <circle cx="255" cy="185" r="8" fill="#2F5233"/>
+              <circle cx="285" cy="170" r="8" fill="#2F5233"/>
+              <circle cx="260" cy="160" r="60" fill="none" stroke="#2B1D14" stroke-width="1.5" stroke-dasharray="5 6" opacity=".45"/>
+              <circle cx="260" cy="160" r="10" fill="#2B1D14"/>
+              <line x1="260" y1="160" x2="240" y2="150" stroke="#2B1D14" stroke-width="1.5" stroke-dasharray="4 5"/>
+              <line x1="260" y1="160" x2="270" y2="130" stroke="#2B1D14" stroke-width="1.5" stroke-dasharray="4 5"/>
+              <line x1="260" y1="160" x2="255" y2="185" stroke="#2B1D14" stroke-width="1.5" stroke-dasharray="4 5"/>
+              <line x1="260" y1="160" x2="285" y2="170" stroke="#2B1D14" stroke-width="1.5" stroke-dasharray="4 5"/>
+              <text x="290" y="45" font-family="Courier Prime, monospace" font-size="14" fill="#B08D57">other documents</text>
+              <text x="292" y="118" font-family="Courier Prime, monospace" font-size="14" fill="#2F5233">nearest neighbors</text>
+              <text x="215" y="210" font-family="Courier Prime, monospace" font-size="14" fill="#2B1D14">query</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: CONCEPT — Cosine similarity -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Measuring Similarity With Cosine</h2>
+        <div class="rule"></div>
+        <ul class="bullets tight">
+          <li data-editable>To rank neighbors we need a number for "how close" two vectors are.</li>
+          <li data-editable><strong>Cosine similarity</strong> measures the angle between two vectors — it asks "do they point the same direction?"</li>
+          <li data-editable>Scores run roughly from -1 (opposite) to 1 (identical direction); most text embeddings land between 0 and 1.</li>
+          <li data-editable>Higher score = more similar meaning. Sort documents by score, keep the top few.</li>
+        </ul>
+        <div class="code-block" data-editable>cosine_similarity(A, B) = dot(A, B) / (norm(A) * norm(B))</div>
+      </div>
+    </section>
+
+    <!-- 6: CONCEPT — Semantic vs Keyword -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Semantic Search vs. Keyword Search</h2>
+        <div class="rule"></div>
+        <div class="card-grid">
+          <div class="card">
+            <h3 data-editable>Keyword Search</h3>
+            <ul>
+              <li data-editable>Matches exact words in the text</li>
+              <li data-editable>"puppy food" misses an article titled "canine nutrition"</li>
+              <li data-editable>Fast, simple, and well understood</li>
+              <li data-editable>Struggles with synonyms and paraphrasing</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 data-editable>Semantic Search</h3>
+            <ul>
+              <li data-editable>Matches meaning, not exact wording</li>
+              <li data-editable>"puppy food" correctly finds "canine nutrition"</li>
+              <li data-editable>Needs an embedding model plus vector comparison</li>
+              <li data-editable>Handles synonyms, paraphrase, and typos gracefully</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:23px; margin-top:22px;" data-editable>Many production systems blend both — "hybrid search" — for the best of each.</p>
+      </div>
+    </section>
+
+    <!-- 7: CONCEPT — Vector Databases -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Vector Databases: Where Embeddings Live</h2>
+        <div class="rule"></div>
+        <div class="card-grid cols-3">
+          <div class="card">
+            <h3 data-editable>Chroma</h3>
+            <ul>
+              <li data-editable>Open-source, runs locally or embedded in your app</li>
+              <li data-editable>Great for prototyping and smaller projects</li>
+              <li data-editable>Simple Python API, minimal setup</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 data-editable>FAISS</h3>
+            <ul>
+              <li data-editable>Meta's similarity-search library</li>
+              <li data-editable>In-memory and extremely fast at scale</li>
+              <li data-editable>No server — you manage persistence yourself</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 data-editable>Pinecone</h3>
+            <ul>
+              <li data-editable>Fully-managed cloud vector database</li>
+              <li data-editable>Scales to billions of vectors; ops handled for you</li>
+              <li data-editable>Good fit for production teams</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:22px; margin-top:22px;" data-editable>All three do the same core job: store vectors, and find nearest neighbors fast.</p>
+      </div>
+    </section>
+
+    <!-- 8: DEMO -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>From the Notebook</div>
+        <h2 class="slide-title" data-editable>Find the Nearest Match</h2>
+        <div class="rule"></div>
+        <div class="rank-list">
+          <div class="rank-row best">
+            <div class="rank-text">Password reset instructions for the employee portal<span class="q" data-editable>query: "How do I reset my password?"</span></div>
+            <div class="rank-bar-wrap"><div class="rank-bar" style="width:91%"></div></div>
+            <div class="rank-score" data-editable>0.91</div>
+          </div>
+          <div class="rank-row">
+            <div class="rank-text" data-editable>Our refund policy for annual subscriptions</div>
+            <div class="rank-bar-wrap"><div class="rank-bar" style="width:18%"></div></div>
+            <div class="rank-score" data-editable>0.18</div>
+          </div>
+          <div class="rank-row">
+            <div class="rank-text" data-editable>Office hours are 9am to 5pm, Monday through Friday</div>
+            <div class="rank-bar-wrap"><div class="rank-bar" style="width:11%"></div></div>
+            <div class="rank-score" data-editable>0.11</div>
+          </div>
+        </div>
+        <p class="compare-caption" style="text-align:left; margin-top:24px;" data-editable>The embedding model never compared the literal word "reset" — it matched meaning, and ranked accordingly.</p>
+      </div>
+    </section>
+
+    <!-- 9: PITFALLS -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Common Pitfalls</div>
+        <h2 class="slide-title" data-editable>Misconceptions Worth Correcting</h2>
+        <div class="rule"></div>
+        <div class="pitfall-grid">
+          <div class="pitfall"><h4 data-editable>Chunking Affects Quality</h4><p data-editable>Chunks that are too big or too small hurt embedding matches — more on this next class.</p></div>
+          <div class="pitfall"><h4 data-editable>Use the Same Model on Both Sides</h4><p data-editable>Embed your documents and your queries with the same model, or distances become meaningless.</p></div>
+          <div class="pitfall"><h4 data-editable>Cosine Isn't Magic</h4><p data-editable>An irrelevant document can still score deceptively high — always sanity-check top results.</p></div>
+          <div class="pitfall"><h4 data-editable>Cost Scales With Volume</h4><p data-editable>Every chunk you embed costs time and money — plan for it at scale.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Hands-On</div>
+        <h2 class="slide-title" data-editable>This Week's Challenge Cards</h2>
+        <div class="rule"></div>
+        <ol class="challenge-list">
+          <li data-editable><span class="num">01</span>Embed five sentences of your own and find the odd one out</li>
+          <li data-editable><span class="num">02</span>Swap the query and see how the ranking changes</li>
+          <li data-editable><span class="num">03</span>Craft a tricky query that fools cosine similarity</li>
+          <li data-editable><span class="num">04</span>Compare cosine similarity against Euclidean distance</li>
+          <li data-editable><span class="num">05</span>Bonus: argue for a vector DB choice in three sentences</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 11: RECAP -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable>An embedding is a vector that represents meaning; nearby vectors mean similar meaning.</li>
+          <li data-editable>Cosine similarity gives us a number for "how close" two vectors point.</li>
+          <li data-editable>Semantic search matches meaning; keyword search matches literal words.</li>
+          <li data-editable>Vector databases like Chroma, FAISS, and Pinecone store and search vectors at scale.</li>
+          <li data-editable>Nearest-neighbor search is the retrieval half of RAG — generation is next.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 12: NEXT CLASS -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.3</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Next Class</div>
+        <h2 class="slide-title" data-editable>Up Next: Building a Simple RAG Chatbot</h2>
+        <div class="rule"></div>
+        <div class="next-box">
+          <p data-editable>Now that you can find the right chunk, Class 3 assembles the whole chatbot: chunking documents, retrieving the best matches, and generating grounded answers.</p>
+          <div class="next-callno" data-editable>FILE UNDER — RAG 006.3, CARD 6.3</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="top-links">
+  <a href="index.html">Week 6 Index</a>
+  <a href="../index.html">Course Home</a>
+</div>
+
+<div class="deck-controls">
+  <div class="deck-controls-inner">
+    <span class="breadcrumb" data-editable>GenAI Foundations / Week 6 / Class 2</span>
+    <span id="slideCounter">01 / 12</span>
+  </div>
+</div>
+
+<a class="nav-btn prev" href="class-1.html">← Class 1: Why RAG?</a>
+<a class="nav-btn next" href="class-3.html">Class 3: Building a Chatbot →</a>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

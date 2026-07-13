@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 3 · Building a Simple Agent — Week 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 5 THEME — THE BLUEPRINT / LOOP SCHEMATIC
+   =========================================== */
+:root{
+  --bg:#0b3d63;
+  --cyan:#7fd1ff;
+  --white:#eaf6ff;
+  --orange:#ff8a3d;
+  --font-display:'Big Shoulders Display', sans-serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+*{ box-sizing:border-box; }
+.slide{
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(rgba(127,209,255,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.055) 1px, transparent 1px);
+  background-size:240px 240px, 240px 240px, 40px 40px, 40px 40px;
+  color:var(--white);
+  font-family:var(--font-body);
+}
+.slide-inner{ position:absolute; inset:0; padding:66px 90px 0 90px; }
+
+.eyebrow-row{ display:flex; align-items:center; gap:22px; margin-bottom:8px; }
+.kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan); white-space:nowrap; opacity:.9; }
+.measure-rule{ flex:1; height:14px; opacity:.6; min-width:120px; }
+.mline{ stroke:var(--cyan); stroke-width:1.5; stroke-dasharray:5 5; }
+.marrow{ fill:var(--cyan); }
+
+.slide-title{ font-family:var(--font-display); font-weight:900; font-size:66px; text-transform:uppercase; letter-spacing:.005em; line-height:1.05; margin:10px 0 36px; color:var(--white); }
+.slide-title .accent{ color:var(--orange); }
+
+.bullets{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:24px; max-width:1560px; }
+.bullets li{ font-size:30px; line-height:1.42; padding-left:46px; position:relative; }
+.bullets li::before{ content:""; position:absolute; left:0; top:9px; width:18px; height:18px; border:2px solid var(--cyan); border-radius:50%; opacity:.9; }
+.bullets li b{ color:var(--orange); font-weight:600; }
+.bullets.tight li{ font-size:26px; }
+
+.cards{ display:grid; grid-template-columns:repeat(var(--cols,2), 1fr); gap:26px; }
+.card{ position:relative; background:rgba(234,246,255,.045); border:1px solid rgba(127,209,255,.35); padding:26px 30px; }
+.card h3{ font-family:var(--font-display); font-weight:700; font-size:26px; color:var(--orange); text-transform:uppercase; letter-spacing:.02em; margin:0 0 12px; }
+.card p{ font-size:21px; line-height:1.45; margin:0; opacity:.94; }
+.card ul{ margin:0; padding-left:22px; font-size:20px; line-height:1.5; }
+.card .tag{ display:inline-block; font-family:var(--font-mono); font-size:14px; letter-spacing:.08em; color:var(--cyan); border:1px solid rgba(127,209,255,.5); padding:3px 10px; margin-bottom:12px; text-transform:uppercase; }
+
+.blueprint-frame{ position:relative; }
+.blueprint-frame::before, .blueprint-frame::after{ content:""; position:absolute; width:14px; height:14px; border-color:var(--orange); border-style:solid; }
+.blueprint-frame::before{ top:-1px; left:-1px; border-width:2px 0 0 2px; }
+.blueprint-frame::after{ bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+
+.two-col{ display:grid; grid-template-columns:1fr 460px; gap:50px; align-items:center; }
+.diagram-side{ display:flex; align-items:center; justify-content:center; }
+
+.demo-panel{ background:rgba(4,20,34,.55); border:1px solid rgba(127,209,255,.4); padding:24px 28px; font-family:var(--font-mono); font-size:20px; line-height:1.6; }
+.demo-panel .tag{ color:var(--orange); font-weight:600; }
+.demo-panel .muted{ opacity:.6; }
+
+.titleblock{ position:absolute; right:70px; bottom:44px; width:236px; font-family:var(--font-mono); font-size:13px; background:rgba(5,26,44,.6); border:1px solid rgba(127,209,255,.5); padding:10px 16px; }
+.titleblock .tb-row{ display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed rgba(127,209,255,.25); }
+.titleblock .tb-row:last-child{ border-bottom:none; }
+.titleblock .tb-row span{ color:var(--cyan); letter-spacing:.06em; opacity:.85; }
+.titleblock .tb-row b{ color:var(--white); font-weight:600; }
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed currentColor; outline-offset: 4px; }
+
+.deck-nav-top{ position:fixed; top:20px; right:26px; z-index:1000; display:flex; gap:14px; font-family:var(--font-mono); font-size:13px; letter-spacing:.06em; }
+.deck-nav-top a{ color:var(--cyan); text-decoration:none; border:1px solid rgba(127,209,255,.4); padding:6px 12px; background:rgba(5,26,44,.7); }
+.deck-nav-top a:hover{ border-color:var(--orange); color:var(--orange); }
+
+.deck-controls{ display:flex; align-items:center; gap:16px; font-family:var(--font-mono); font-size:14px; color:var(--cyan); background:rgba(5,26,44,.75); border:1px solid rgba(127,209,255,.4); padding:10px 22px; letter-spacing:.04em; }
+.deck-controls .dot{ opacity:.4; }
+.deck-controls #slideCounter{ color:var(--orange); font-weight:600; }
+
+.nav-btn{ position:fixed; bottom:26px; z-index:1000; font-family:var(--font-mono); font-size:14px; letter-spacing:.05em; color:var(--white); text-decoration:none; background:rgba(5,26,44,.75); border:1px solid rgba(127,209,255,.4); padding:10px 18px; }
+.nav-btn:hover{ border-color:var(--orange); color:var(--orange); }
+.nav-prev{ left:26px; }
+.nav-next{ right:26px; }
+
+.loop-diagram svg{ overflow:visible; }
+.node-circle{ fill:rgba(11,61,99,.6); stroke:var(--cyan); stroke-width:3; opacity:.5; }
+.node-letter{ font-family:var(--font-display); font-weight:900; font-size:22px; fill:var(--cyan); text-anchor:middle; opacity:.65; }
+.node-caption{ font-family:var(--font-mono); font-size:12px; letter-spacing:.12em; fill:var(--white); text-anchor:middle; opacity:.5; }
+.node.active .node-circle{ stroke:var(--orange); opacity:1; filter:drop-shadow(0 0 10px rgba(255,138,61,.65)); }
+.node.active .node-letter{ fill:var(--orange); opacity:1; }
+.node.active .node-caption{ fill:var(--orange); opacity:1; }
+.arc{ fill:none; stroke:var(--cyan); stroke-width:2.5; opacity:.6; stroke-dasharray:7 6; }
+.loop-diagram.animate .arc{ opacity:.85; stroke-dasharray:9 7; animation:dashflow 1.4s linear infinite; }
+@keyframes dashflow{ to{ stroke-dashoffset:-32; } }
+.loop-diagram.animate .node-circle{ animation:cyclepulse 4.5s ease-in-out infinite; }
+.loop-diagram.animate .node-plan .node-circle{ animation-delay:0s; }
+.loop-diagram.animate .node-act .node-circle{ animation-delay:1.5s; }
+.loop-diagram.animate .node-observe .node-circle{ animation-delay:3s; }
+@keyframes cyclepulse{ 0%,6%{ stroke:var(--orange); opacity:1; filter:drop-shadow(0 0 10px rgba(255,138,61,.65)); } 33%,100%{ stroke:var(--cyan); opacity:.5; filter:none; } }
+.loop-diagram.animate .node-letter, .loop-diagram.animate .node-caption{ animation:cyclepulseText 4.5s ease-in-out infinite; }
+.loop-diagram.animate .node-plan .node-letter, .loop-diagram.animate .node-plan .node-caption{ animation-delay:0s; }
+.loop-diagram.animate .node-act .node-letter, .loop-diagram.animate .node-act .node-caption{ animation-delay:1.5s; }
+.loop-diagram.animate .node-observe .node-letter, .loop-diagram.animate .node-observe .node-caption{ animation-delay:3s; }
+@keyframes cyclepulseText{ 0%,6%{ fill:var(--orange); opacity:1; } 33%,100%{ fill:var(--cyan); opacity:.55; } }
+
+.agenda-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:26px; max-width:1500px; }
+.agenda-list li{ display:flex; align-items:baseline; gap:30px; font-size:30px; }
+.agenda-list .num{ font-family:var(--font-display); font-weight:900; font-size:44px; color:var(--orange); min-width:76px; }
+
+.recap-cols{ display:grid; grid-template-columns:1fr 1fr; gap:40px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="loopArrowHead" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7fd1ff" opacity=".8"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<div class="deck-nav-top">
+  <a href="index.html">Week 5 Index</a>
+  <a href="../index.html">All Weeks</a>
+</div>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- SLIDE 1: TITLE -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>GenAI Foundations / Week 5 / Class 3</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <div style="margin-top:120px; max-width:1400px;">
+          <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WK5 &middot; CLASS 03 &middot; INTRODUCTION TO AI AGENTS</div>
+          <h1 class="slide-title" style="font-size:150px; margin:0 0 30px;" data-editable>Building a <span class="accent">Simple Agent</span></h1>
+          <p style="font-size:30px; max-width:1200px; line-height:1.5; opacity:.92;" data-editable>Memory, picking a framework vs. rolling your own, and a hands-on build: a minimal agent loop with real tools, running across multiple turns.</p>
+        </div>
+      </div>
+      <div class="loop-diagram show-arcs" style="position:absolute; right:110px; bottom:150px;" aria-hidden="true">
+        <svg viewBox="0 0 240 240" width="230" height="230">
+          <path class="arc" marker-end="url(#loopArrowHead)" d="M120,43 A92,92 0 0,1 199.7,181"/>
+          <path class="arc" marker-end="url(#loopArrowHead)" d="M199.7,181 A92,92 0 0,1 40.3,181"/>
+          <path class="arc" marker-end="url(#loopArrowHead)" d="M40.3,181 A92,92 0 0,1 120,43"/>
+          <g class="node node-plan active"><circle class="node-circle" cx="120" cy="43" r="22"/><text class="node-letter" x="120" y="50">P</text><text class="node-caption" x="120" y="14">PLAN</text></g>
+          <g class="node node-act"><circle class="node-circle" cx="199.7" cy="181" r="22"/><text class="node-letter" x="199.7" y="188">A</text><text class="node-caption" x="199.7" y="222">ACT</text></g>
+          <g class="node node-observe"><circle class="node-circle" cx="40.3" cy="181" r="22"/><text class="node-letter" x="40.3" y="188">O</text><text class="node-caption" x="40.3" y="222">OBSERVE</text></g>
+        </svg>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">01</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: AGENDA -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Today's Map</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Class 03 <span class="accent">Agenda</span></h2>
+        <ol class="agenda-list">
+          <li><span class="num">01</span><span data-editable>Why memory matters once a loop has more than one step</span></li>
+          <li><span class="num">02</span><span data-editable>Working memory vs. persistent memory</span></li>
+          <li><span class="num">03</span><span data-editable>Custom loop vs. a framework — how to choose</span></li>
+          <li><span class="num">04</span><span data-editable>Anatomy of a minimal agent, and its guardrails</span></li>
+          <li><span class="num">05</span><span data-editable>Hands-on: build the loop with a calculator &amp; search tool</span></li>
+        </ol>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">02</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: WHY MEMORY MATTERS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 01</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Why <span class="accent">Memory</span> Matters</h2>
+        <ul class="bullets">
+          <li data-editable>LLM calls are stateless by default — each request starts fresh</li>
+          <li data-editable>Without memory, every turn forgets prior tool results and decisions</li>
+          <li data-editable><b>Short-term memory</b> = the running conversation and observations within one task</li>
+          <li data-editable><b>Long-term memory</b> = facts or summaries stored across sessions (files, databases, vector stores)</li>
+          <li data-editable>Today's build uses short-term, in-loop memory only</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">03</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: TWO KINDS OF MEMORY -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 02</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Two Kinds of Memory <span class="accent">in an Agent</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame">
+            <div class="tag">In This Task</div>
+            <h3>Working Memory</h3>
+            <p data-editable>The list of messages and tool results within one run of the loop. Lost when the run ends unless you save it.</p>
+          </div>
+          <div class="card blueprint-frame">
+            <div class="tag">Across Sessions</div>
+            <h3>Persistent Memory</h3>
+            <p data-editable>User preferences and past results saved between runs — a file, a database, a vector store.</p>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">04</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: FRAMEWORK VS CUSTOM -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 03</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Framework <span class="accent">or Roll Your Own?</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame">
+            <div class="tag">Plain Python</div>
+            <h3>Custom Loop</h3>
+            <ul>
+              <li data-editable>Transparent — you see every message and decision</li>
+              <li data-editable>Few dependencies, easy to debug</li>
+              <li data-editable>Best for learning and small, focused tasks</li>
+            </ul>
+          </div>
+          <div class="card blueprint-frame">
+            <div class="tag">e.g. LangChain</div>
+            <h3>Framework</h3>
+            <ul>
+              <li data-editable>Built-in tool routing, memory, many integrations</li>
+              <li data-editable>More abstraction and dependencies</li>
+              <li data-editable>Best once you're scaling past a simple loop</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:22px; opacity:.8; margin-top:26px;" data-editable>Guidance: start custom to understand the loop — reach for a framework when you outgrow it.</p>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">05</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: ANATOMY OF A MINIMAL AGENT (ANIMATED) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 04</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Anatomy of a <span class="accent">Minimal Agent</span></h2>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>A system prompt describing the goal and available tools</li>
+            <li data-editable>A loop that sends messages, checks for a tool call or a final answer</li>
+            <li data-editable>If a tool call: execute it, append the result, and repeat</li>
+            <li data-editable>A stopping condition — a final answer, or a max-turns limit</li>
+          </ul>
+          <div class="diagram-side">
+            <div class="loop-diagram animate" aria-hidden="true">
+              <svg viewBox="0 0 240 240" width="360" height="360">
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M120,43 A92,92 0 0,1 199.7,181"/>
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M199.7,181 A92,92 0 0,1 40.3,181"/>
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M40.3,181 A92,92 0 0,1 120,43"/>
+                <g class="node node-plan"><circle class="node-circle" cx="120" cy="43" r="22"/><text class="node-letter" x="120" y="50">P</text><text class="node-caption" x="120" y="14">PLAN</text></g>
+                <g class="node node-act"><circle class="node-circle" cx="199.7" cy="181" r="22"/><text class="node-letter" x="199.7" y="188">A</text><text class="node-caption" x="199.7" y="222">ACT</text></g>
+                <g class="node node-observe"><circle class="node-circle" cx="40.3" cy="181" r="22"/><text class="node-letter" x="40.3" y="188">O</text><text class="node-caption" x="40.3" y="222">OBSERVE</text></g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">06</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: GUARDRAILS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 05</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Guardrails for a <span class="accent">Real Loop</span></h2>
+        <ul class="bullets">
+          <li data-editable>A max-turns limit, so the loop always ends</li>
+          <li data-editable>A timeout, in case any single step hangs</li>
+          <li data-editable>Validate tool arguments before running them</li>
+          <li data-editable>Log every step — plan, act, observe — for debugging</li>
+          <li data-editable>Human-in-the-loop for risky actions: spending money, sending messages</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">07</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Demo Walkthrough</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Building the Loop, <span class="accent">Step by Step</span></h2>
+        <p style="font-size:22px; opacity:.85; margin-bottom:16px;" data-editable>The notebook wires up two mock tools — a calculator and a search stand-in — and traces one run:</p>
+        <div class="demo-panel" style="font-size:19px;">
+[turn 1] <span class="tag">plan</span> &rarr; needs a calculation<br>
+[turn 1] <span class="tag">act</span> &rarr; calculator("42 * 17")<br>
+[turn 1] <span class="tag">observe</span> &rarr; 714<br>
+[turn 2] <span class="tag">plan</span> &rarr; needs a lookup<br>
+[turn 2] <span class="tag">act</span> &rarr; mock_search("vector database")<br>
+[turn 2] <span class="tag">observe</span> &rarr; definition returned<br>
+[turn 3] <span class="tag">plan</span> &rarr; final answer, loop ends
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">08</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Pitfalls &amp; Misconceptions</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Where Builds <span class="accent">Go Wrong</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame"><h3>No Turn Cap</h3><p data-editable>Without a limit, a bug becomes an infinite loop and a runaway bill.</p></div>
+          <div class="card blueprint-frame"><h3>Unhandled Errors</h3><p data-editable>One failing tool call crashes the whole agent instead of returning an error message.</p></div>
+          <div class="card blueprint-frame"><h3>Dropped History</h3><p data-editable>Forgetting to append a tool result breaks the model's memory of what happened.</p></div>
+          <div class="card blueprint-frame"><h3>Framework Too Soon</h3><p data-editable>Reaching for a heavy framework before understanding the loop it wraps.</p></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">09</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Hands-On</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Notebook <span class="accent">Challenges</span></h2>
+        <ul class="bullets">
+          <li data-editable>01 — Add a third tool: unit_convert(value, from_unit, to_unit)</li>
+          <li data-editable>02 — Expand mock_search with three new lookup entries</li>
+          <li data-editable>03 — Harden the calculator against invalid expressions</li>
+          <li data-editable>04 — Log every turn's plan/act/observe into a trace list</li>
+          <li data-editable>05 (stretch) — Save and reload memory between separate runs</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">10</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: RECAP (ANIMATED) -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Recap</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Key <span class="accent">Takeaways</span></h2>
+        <div class="two-col">
+          <div class="recap-cols" style="grid-template-columns:1fr;">
+            <ul class="bullets">
+              <li data-editable>Memory is just the message list you carry through the loop</li>
+              <li data-editable>Start with a custom loop — reach for a framework once you outgrow it</li>
+              <li data-editable>A minimal agent = system prompt + loop + tools + a stopping condition</li>
+              <li data-editable>Guardrails (turn limits, validation, logging) are what make a loop production-ready</li>
+            </ul>
+          </div>
+          <div class="diagram-side">
+            <div class="loop-diagram animate" aria-hidden="true">
+              <svg viewBox="0 0 240 240" width="260" height="260">
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M120,43 A92,92 0 0,1 199.7,181"/>
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M199.7,181 A92,92 0 0,1 40.3,181"/>
+                <path class="arc" marker-end="url(#loopArrowHead)" d="M40.3,181 A92,92 0 0,1 120,43"/>
+                <g class="node node-plan"><circle class="node-circle" cx="120" cy="43" r="22"/><text class="node-letter" x="120" y="50">P</text><text class="node-caption" x="120" y="14">PLAN</text></g>
+                <g class="node node-act"><circle class="node-circle" cx="199.7" cy="181" r="22"/><text class="node-letter" x="199.7" y="188">A</text><text class="node-caption" x="199.7" y="222">ACT</text></g>
+                <g class="node node-observe"><circle class="node-circle" cx="40.3" cy="181" r="22"/><text class="node-letter" x="40.3" y="188">O</text><text class="node-caption" x="40.3" y="222">OBSERVE</text></g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">11</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: NEXT WEEK -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Next Week</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <div style="margin-top:100px; max-width:1400px;">
+          <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WEEK 06</div>
+          <h2 class="slide-title" style="font-size:100px;" data-editable>Foundations of <span class="accent">RAG &amp; Chatbots</span></h2>
+          <p style="font-size:28px; max-width:1200px; line-height:1.5; opacity:.9;" data-editable>Why retrieval-augmented generation, how embeddings and vector search work, and building a simple RAG chatbot end to end.</p>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">12</span>/<span class="sheet-total">12</span></b></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="deck-controls">
+  <span data-editable>GenAI Foundations / Week 5 / Class 3</span>
+  <span class="dot">&bull;</span>
+  <span id="slideCounter">01 / 12</span>
+</div>
+<a class="nav-btn nav-prev" href="class-2.html">&larr; Class 2</a>
+<a class="nav-btn nav-next" href="../week-6/index.html">Week 6 &rarr;</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+document.querySelectorAll('.slide').forEach((s,i)=>{
+  const n = s.querySelector('.sheet-num'); if(n) n.textContent = String(i+1).padStart(2,'0');
+  const t = s.querySelector('.sheet-total'); if(t) t.textContent = String(document.querySelectorAll('.slide').length).padStart(2,'0');
+});
+</script>
+
+<script>
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+
+</body>
+</html>

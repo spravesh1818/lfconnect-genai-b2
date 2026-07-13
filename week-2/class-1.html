@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 1: What Is a Large Language Model? — Week 2</title>
+<meta name="description" content="Week 2, Class 1: next-token prediction, training at a high level, and transformer architecture intuition.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 2 THEME — "THE BLACK BOX / NEURAL SIGNAL"
+   =========================================== */
+:root{
+  --bg:#12071f;
+  --panel:#1d0f30;
+  --panel2:#26153f;
+  --magenta:#d946ef;
+  --cyan:#22d3ee;
+  --amber:#f5a524;
+  --text:#eee6fb;
+  --muted:#a98fc9;
+  --font-display:'Unbounded',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'Space Mono',monospace;
+  --stage-bg:var(--bg);
+  --slide-bg:var(--bg);
+}
+*{box-sizing:border-box;}
+.deck-stage{
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(ellipse 900px 600px at 85% -10%, rgba(217,70,239,.16) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 700px at -5% 110%, rgba(34,211,238,.14) 0%, transparent 60%),
+    var(--bg);
+}
+.deck-stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(238,230,251,.07) 1.5px, transparent 1.5px);
+  background-size:44px 44px;
+  opacity:.5;
+}
+.slide-inner{position:absolute;inset:0;padding:84px 128px 96px;display:flex;flex-direction:column;z-index:1;}
+.eyebrow{font-family:var(--font-mono);font-size:22px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin:0 0 18px;display:flex;align-items:center;gap:14px;}
+.eyebrow::before{content:'';width:34px;height:2px;background:var(--cyan);display:inline-block;}
+h1.slide-title, h2.slide-title{font-family:var(--font-display);font-weight:900;color:var(--text);margin:0 0 8px;letter-spacing:-.01em;}
+h1.slide-title{font-size:74px;line-height:1.05;}
+h2.slide-title{font-size:56px;line-height:1.12;}
+.subtitle{font-family:var(--font-body);font-size:26px;color:var(--muted);margin:0 0 36px;max-width:1300px;line-height:1.5;}
+.rule{width:100%;height:1px;background:linear-gradient(90deg, rgba(217,70,239,.5), rgba(34,211,238,.15), transparent);margin:0 0 36px;}
+
+/* bullets */
+ul.bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px;}
+ul.bullets li{font-size:26px;line-height:1.5;padding-left:40px;position:relative;color:var(--text);}
+ul.bullets li::before{content:'▹';color:var(--magenta);position:absolute;left:0;top:0;font-size:26px;}
+ul.bullets li b, ul.bullets li strong{color:var(--cyan);font-weight:600;}
+ul.bullets.tight li{font-size:23px;}
+
+/* cards */
+.card-grid{display:grid;gap:26px;flex:1;align-content:start;}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.card{background:var(--panel);border:1px solid rgba(217,70,239,.28);border-radius:18px;padding:30px 32px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+.card.cy{border-color:rgba(34,211,238,.32);}
+.card h3{font-family:var(--font-display);font-weight:700;font-size:25px;color:var(--magenta);margin:0 0 12px;}
+.card.cy h3{color:var(--cyan);}
+.card p{font-size:19px;line-height:1.5;color:var(--text);margin:0;opacity:.92;}
+.card .num{font-family:var(--font-mono);font-size:15px;color:var(--muted);letter-spacing:.1em;margin-bottom:8px;display:block;}
+
+/* pitfall cards */
+.pit-card{background:var(--panel);border-left:4px solid var(--magenta);border-radius:10px;padding:22px 26px;}
+.pit-card h3{font-family:var(--font-body);font-weight:600;font-size:21px;color:var(--text);margin:0 0 8px;display:flex;gap:12px;align-items:flex-start;}
+.pit-card h3::before{content:'✕';color:var(--magenta);font-family:var(--font-mono);}
+.pit-card p{font-size:18px;color:var(--muted);line-height:1.5;margin:0;padding-left:32px;}
+
+/* token chips */
+.token-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-family:var(--font-mono);}
+.token-chip{background:var(--panel2);border:1.5px solid var(--cyan);color:var(--cyan);padding:12px 22px;border-radius:9px;font-size:24px;font-weight:700;}
+.token-sep{color:var(--muted);font-size:24px;}
+
+/* code / terminal box */
+.code-box{background:#0a0416;border:1px solid rgba(34,211,238,.3);border-radius:14px;padding:26px 30px;font-family:var(--font-mono);font-size:20px;color:#c7f7ff;line-height:1.7;overflow:hidden;}
+.code-box .cm{color:var(--muted);}
+.code-box .kw{color:var(--magenta);}
+.code-box .st{color:var(--amber);}
+
+/* attention lines decoration */
+.attn-wrap{position:relative;width:100%;height:220px;display:flex;align-items:flex-end;justify-content:center;}
+.attn-words{display:flex;gap:56px;font-family:var(--font-mono);font-size:26px;color:var(--text);z-index:2;position:relative;padding-bottom:14px;}
+.attn-words span{opacity:.9;}
+.attn-svg{position:absolute;inset:0;z-index:1;}
+
+/* layout helpers */
+.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;flex:1;align-items:center;}
+.center-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;gap:22px;}
+.flex-fill{flex:1;display:flex;flex-direction:column;justify-content:center;}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:16px;letter-spacing:.1em;text-transform:uppercase;color:var(--bg);background:var(--cyan);padding:8px 16px;border-radius:6px;font-weight:700;}
+.tag.mg{background:var(--magenta);}
+.tag.am{background:var(--amber);}
+
+/* title slide */
+.title-slide-inner{display:flex;flex-direction:column;justify-content:center;height:100%;}
+.class-chip{font-family:var(--font-mono);font-size:20px;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
+.mega-title{font-family:var(--font-display);font-weight:900;font-size:96px;line-height:1.04;color:var(--text);margin:0 0 26px;max-width:1500px;}
+.mega-title .hl{color:var(--magenta);}
+.deck-sub{font-size:28px;color:var(--muted);max-width:1150px;line-height:1.55;margin:0 0 40px;}
+.theme-strap{font-family:var(--font-mono);font-size:18px;color:var(--muted);letter-spacing:.08em;}
+.theme-strap b{color:var(--cyan);}
+
+/* recap */
+.recap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:26px;}
+.recap-list li{display:flex;gap:22px;align-items:flex-start;font-size:27px;line-height:1.5;}
+.recap-num{font-family:var(--font-display);font-weight:900;font-size:34px;color:var(--magenta);min-width:56px;}
+
+/* next class */
+.next-card{background:var(--panel);border:1px solid rgba(34,211,238,.35);border-radius:22px;padding:52px 60px;max-width:1200px;margin:0 auto;text-align:center;}
+.next-card .tag{margin-bottom:20px;}
+.next-card h2{font-family:var(--font-display);font-weight:900;font-size:52px;color:var(--text);margin:0 0 18px;}
+.next-card p{font-size:24px;color:var(--muted);line-height:1.5;margin:0;}
+
+/* deck controls / nav */
+.deck-controls{display:flex;gap:18px;align-items:center;background:rgba(29,15,48,.85);border:1px solid rgba(217,70,239,.3);backdrop-filter:blur(6px);padding:10px 22px;border-radius:999px;font-family:var(--font-mono);font-size:14px;color:var(--muted);}
+.deck-controls .crumb{color:var(--cyan);}
+.deck-controls .sep{opacity:.4;}
+.deck-controls .counter{color:var(--text);font-weight:700;}
+.corner-links{position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:10px;font-family:var(--font-mono);font-size:13px;}
+.corner-links a{color:var(--muted);text-decoration:none;border:1px solid rgba(238,230,251,.25);padding:8px 14px;border-radius:8px;background:rgba(29,15,48,.7);transition:color .2s,border-color .2s;}
+.corner-links a:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn{position:fixed;bottom:20px;z-index:1000;font-family:var(--font-mono);font-size:14px;text-decoration:none;color:var(--muted);background:rgba(29,15,48,.75);border:1px solid rgba(34,211,238,.3);padding:12px 18px;border-radius:10px;transition:color .2s,border-color .2s;}
+.nav-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn.prev{left:20px;}
+.nav-btn.next{right:20px;}
+
+/* edit mode */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--cyan); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <section class="slide">
+      <div class="slide-inner title-slide-inner">
+        <div class="class-chip" data-editable>WEEK 2 · THE BLACK BOX / NEURAL SIGNAL · CLASS 1</div>
+        <h1 class="mega-title" data-editable>What Is a <span class="hl">Large Language Model?</span></h1>
+        <p class="deck-sub" data-editable>Underneath the chat interface is a next-token predictor trained on an enormous pile of text. This class builds the mental model: prediction, training, and the transformer architecture that makes it work.</p>
+        <div class="theme-strap">GenAI Foundations <span style="opacity:.5">/</span> Week 2: Introduction to LLMs <span style="opacity:.5">/</span> <b>Class 1</b></div>
+      </div>
+    </section>
+
+    <!-- 2: AGENDA -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Today's Map</div>
+        <h2 class="slide-title" data-editable>Five Ideas, One Mental Model</h2>
+        <p class="subtitle" data-editable>By the end of class you'll be able to explain, in plain language, what a large language model actually does — and why.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-3">
+          <div class="card"><span class="num">01</span><h3 data-editable>Next-Token Prediction</h3><p data-editable>The single mechanism underneath everything an LLM produces.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>From Words to a Sentence</h3><p data-editable>How one prediction at a time becomes a coherent paragraph.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Training, at a High Level</h3><p data-editable>Pretraining, fine-tuning, and human feedback — the three stages.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Architecture Intuition</h3><p data-editable>Why transformers and "attention" replaced older designs.</p></div>
+          <div class="card"><span class="num">05</span><h3 data-editable>Common Misconceptions</h3><p data-editable>What an LLM is not — memory, understanding, and search engines.</p></div>
+          <div class="card cy"><span class="num">06</span><h3 data-editable>Hands-On Preview</h3><p data-editable>A tiny "predict the next word" toy model in the notebook.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3: CONCEPT - next token prediction -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 01</div>
+        <h2 class="slide-title" data-editable>It's Just... Next-Token Prediction</h2>
+        <p class="subtitle" data-editable>Every output an LLM produces — an essay, a poem, a line of code — is built one small piece at a time, by repeatedly asking one question.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>At each step, the model looks at all the text so far and asks: <b>"what token is most likely to come next?"</b></li>
+            <li data-editable>It doesn't plan the whole answer up front — the next piece is chosen, appended, and the question is asked again.</li>
+            <li data-editable>This is the same core skill as your phone's autocomplete — just trained on far more text, with a far larger model.</li>
+            <li data-editable>There is no separate "understanding module" — fluent-looking language emerges from this one repeated act.</li>
+          </ul>
+          <div class="code-box" data-editable>
+<span class="cm"># the model's job, one step</span><br>
+prompt = <span class="st">"The capital of France is"</span><br>
+next_token = model.predict(prompt)<br>
+<span class="cm">#</span> next_token → <span class="st">" Paris"</span><br><br>
+prompt += next_token<br>
+<span class="cm"># ...repeat until the model emits a stop token</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4: CONCEPT - autoregressive loop / attention lines -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 02</div>
+        <h2 class="slide-title" data-editable>From One Word to a Sentence</h2>
+        <p class="subtitle" data-editable>This "predict, append, repeat" cycle is called <b style="color:var(--cyan)">autoregressive generation</b> — each new token is generated conditioned on every token that came before it.</p>
+        <div class="rule"></div>
+        <div class="attn-wrap" data-editable>
+          <svg class="attn-svg" viewBox="0 0 1200 220" preserveAspectRatio="none">
+            <path d="M120,190 C 250,40 300,40 380,190" stroke="#d946ef" stroke-width="2" fill="none" opacity=".55"/>
+            <path d="M120,190 C 300,10 450,10 620,190" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".3"/>
+            <path d="M380,190 C 460,80 540,80 620,190" stroke="#d946ef" stroke-width="2" fill="none" opacity=".65"/>
+            <path d="M620,190 C 700,60 820,60 900,190" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".45"/>
+            <path d="M380,190 C 550,-10 780,-10 900,190" stroke="#d946ef" stroke-width="2" fill="none" opacity=".2"/>
+            <path d="M900,190 C 970,90 1040,90 1100,190" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".6"/>
+            <path d="M120,190 C 400,-30 850,-30 1100,190" stroke="#eee6fb" stroke-width="1.5" fill="none" opacity=".12"/>
+          </svg>
+          <div class="attn-words">
+            <span>The</span><span>quick</span><span>fox</span><span>jumps</span><span>over</span><span style="color:var(--amber)">?</span>
+          </div>
+        </div>
+        <ul class="bullets tight" style="margin-top:8px;">
+          <li data-editable>Faint curved lines = the model weighing how much each earlier word matters for predicting the next one.</li>
+          <li data-editable>Generation stops when the model predicts a special <b>end-of-sequence</b> token, or a length limit is hit.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5: CONCEPT - training high level -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 03</div>
+        <h2 class="slide-title" data-editable>Training, at a High Level</h2>
+        <p class="subtitle" data-editable>The prediction skill has to come from somewhere. It's learned by adjusting billions of internal numbers ("parameters") so predictions get closer to real text.</p>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable><b>Self-supervised:</b> training text already contains the "answer" — the model hides the next word and grades itself for free, no human labeling needed.</li>
+          <li data-editable><b>Massive scale:</b> trillions of words from books, websites, code, and articles — far more than any person reads in a lifetime.</li>
+          <li data-editable><b>Gradual adjustment:</b> every wrong guess nudges the model's internal weights slightly, repeated billions of times, until predictions become fluent.</li>
+          <li data-editable><b>Frozen snapshot:</b> once training ends, the model has a knowledge "cutoff" date — it doesn't know about events after that point.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6: CONCEPT - three training stages cards -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 03, continued</div>
+        <h2 class="slide-title" data-editable>Three Stages Turn Prediction into a Helpful Assistant</h2>
+        <p class="subtitle" data-editable>Raw next-token prediction alone produces a model that completes text plausibly — not one that follows instructions politely. Two more stages fix that.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-3">
+          <div class="card">
+            <span class="num">STAGE 1</span>
+            <h3 data-editable>Pretraining</h3>
+            <p data-editable>Learn general language patterns, facts, and reasoning shapes by predicting text across the open web.</p>
+          </div>
+          <div class="card cy">
+            <span class="num">STAGE 2</span>
+            <h3 data-editable>Supervised Fine-Tuning</h3>
+            <p data-editable>Show the model curated example conversations of good instruction-following, so it learns the assistant "shape."</p>
+          </div>
+          <div class="card">
+            <span class="num">STAGE 3</span>
+            <h3 data-editable>Human Feedback (RLHF)</h3>
+            <p data-editable>Humans rank multiple model responses; the model is tuned to prefer answers people rate as more helpful and safe.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7: CONCEPT - transformer / attention intuition -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 04</div>
+        <h2 class="slide-title" data-editable>Architecture Intuition: the Transformer</h2>
+        <p class="subtitle" data-editable>Modern LLMs are built from <b style="color:var(--cyan)">transformer</b> blocks, whose signature ingredient is a mechanism called <b style="color:var(--magenta)">self-attention</b>.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>Self-attention lets every word in a sentence directly "look at" every other word to decide what's relevant.</li>
+            <li data-editable>Older architectures (RNNs) read text strictly left to right, one word at a time — slow, and prone to forgetting distant words.</li>
+            <li data-editable>Transformers process a whole sequence in parallel, which is dramatically faster to train on modern hardware.</li>
+            <li data-editable>Stacking dozens of attention layers lets the model build up increasingly abstract representations of meaning.</li>
+          </ul>
+          <div class="attn-wrap" style="height:260px;">
+            <svg class="attn-svg" viewBox="0 0 1000 260" preserveAspectRatio="none">
+              <path d="M100,220 C 220,60 260,60 340,220" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".5"/>
+              <path d="M100,220 C 260,20 440,20 560,220" stroke="#d946ef" stroke-width="2" fill="none" opacity=".55"/>
+              <path d="M340,220 C 420,90 480,90 560,220" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".35"/>
+              <path d="M560,220 C 640,70 740,70 820,220" stroke="#d946ef" stroke-width="2" fill="none" opacity=".6"/>
+              <path d="M100,220 C 380,-40 700,-40 900,220" stroke="#eee6fb" stroke-width="1.5" fill="none" opacity=".14"/>
+              <path d="M340,220 C 550,-10 750,-10 900,220" stroke="#22d3ee" stroke-width="2" fill="none" opacity=".25"/>
+            </svg>
+            <div class="attn-words" style="gap:44px;font-size:23px;">
+              <span>river</span><span>bank</span><span>was</span><span>flooded</span><span>yesterday</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8: CONCEPT - what attention buys you -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 04, continued</div>
+        <h2 class="slide-title" data-editable>What Attention Buys You: Disambiguation</h2>
+        <p class="subtitle" data-editable>Attention is how the model figures out which meaning of an ambiguous word applies, using distant context clues.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card cy">
+            <h3 data-editable>"I deposited cash at the bank."</h3>
+            <p data-editable>Attention weighs "deposited" and "cash" heavily — the model resolves <i>bank</i> as a financial institution.</p>
+          </div>
+          <div class="card">
+            <h3 data-editable>"We sat by the river bank."</h3>
+            <p data-editable>Here "river" pulls the attention weight instead — the same word <i>bank</i> now means the edge of a river.</p>
+          </div>
+        </div>
+        <ul class="bullets tight" style="margin-top:30px;">
+          <li data-editable>This is also how the model tracks long-range dependencies — a pronoun on line 40 can still "attend to" the name introduced on line 1.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 9: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Demo Walkthrough → notebook</div>
+        <h2 class="slide-title" data-editable>Toy Example: Predicting the Next Word</h2>
+        <p class="subtitle" data-editable>The companion notebook builds a miniature, from-scratch version of next-token prediction using nothing but word-frequency counts — no API key required.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <div class="code-box" data-editable>
+<span class="cm"># tiny toy model: count what follows each word</span><br>
+corpus = <span class="st">"the cat sat the cat ran the dog sat"</span><br>
+<span class="kw">from</span> collections <span class="kw">import</span> defaultdict, Counter<br>
+follows = defaultdict(Counter)<br>
+words = corpus.split()<br>
+<span class="kw">for</span> a, b <span class="kw">in</span> zip(words, words[1:]):<br>
+&nbsp;&nbsp;follows[a][b] += 1<br>
+<span class="cm"># follows["the"] → Counter({'cat': 2, 'dog': 1})</span>
+          </div>
+          <ul class="bullets">
+            <li data-editable>Given the word <b>"the"</b>, this toy counts how often each word follows it in the training text.</li>
+            <li data-editable>"Cat" appears twice after "the," "dog" once — so the toy model predicts <b>"cat"</b> as most likely.</li>
+            <li data-editable>Real LLMs replace word counts with billions of learned parameters, but the underlying question is identical.</li>
+            <li data-editable>Open the notebook to run this yourself and try feeding it a different tiny corpus.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Common Pitfalls</div>
+        <h2 class="slide-title" data-editable>What an LLM Is Not</h2>
+        <p class="subtitle" data-editable>The fluent, confident tone of LLM output invites a few tempting but incorrect mental models. Watch for these.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="pit-card"><h3 data-editable>"It understands like a human"</h3><p data-editable>It manipulates statistical patterns in language — it has no beliefs, senses, or goals of its own.</p></div>
+          <div class="pit-card"><h3 data-editable>"It's just a fancy search engine"</h3><p data-editable>It doesn't look anything up at inference time by default — it generates text from learned patterns, which can be wrong.</p></div>
+          <div class="pit-card"><h3 data-editable>"Bigger always means smarter"</h3><p data-editable>Data quality, fine-tuning, and task fit often matter as much as raw parameter count.</p></div>
+          <div class="pit-card"><h3 data-editable>"It remembers our last conversation"</h3><p data-editable>Without an external memory system, each conversation starts fresh — apparent memory comes from what's re-sent as context.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Hands-On Preview</div>
+        <h2 class="slide-title" data-editable>In the Notebook: Build &amp; Break the Toy Predictor</h2>
+        <p class="subtitle" data-editable>class-1.ipynb closes with five short challenges. A preview of what you'll practice:</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card"><span class="num">01</span><h3 data-editable>Extend the corpus</h3><p data-editable>Add more sentences and observe how predictions shift.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Predict multiple steps</h3><p data-editable>Chain predictions to auto-generate a short phrase.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Break the model</h3><p data-editable>Find a word with no training data and see what happens.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Explain in your own words</h3><p data-editable>Write a plain-English paragraph connecting the toy to real LLMs.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12: RECAP -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <div class="rule"></div>
+        <ul class="recap-list">
+          <li><span class="recap-num">01</span><span data-editable>An LLM generates text by repeatedly predicting the single most likely next token.</span></li>
+          <li><span class="recap-num">02</span><span data-editable>Training happens in stages: self-supervised pretraining, then fine-tuning, then human-feedback alignment.</span></li>
+          <li><span class="recap-num">03</span><span data-editable>Transformers use self-attention so every word can weigh every other word — enabling context-aware, parallel processing.</span></li>
+          <li><span class="recap-num">04</span><span data-editable>Fluent output does not mean human-like understanding, live search, or persistent memory.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 13: NEXT CLASS -->
+    <section class="slide">
+      <div class="slide-inner center-col">
+        <div class="tag mg">Next Class</div>
+        <div class="next-card">
+          <h2 data-editable>Tokens, Temperature &amp; Context Windows</h2>
+          <p data-editable>Now that you know how prediction works, we'll open the hood further: how text becomes tokens, how "temperature" controls randomness, and why context windows shape cost and capability.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="corner-links">
+  <a href="../index.html">Course</a>
+  <a href="index.html">Week 2</a>
+</div>
+<a class="nav-btn prev" href="index.html">← Week 2 Index</a>
+<a class="nav-btn next" href="class-2.html">Class 2: Tokens &amp; Temperature →</a>
+
+<div class="deck-controls">
+  <span class="crumb">GenAI Foundations / Week 2 / Class 1</span>
+  <span class="sep">·</span>
+  <span class="counter" id="slideCounter">01 / 13</span>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 1 — Prompt Structure & Best Practices | Week 4</title>
+<meta name="description" content="Week 4, Class 1: The anatomy of a good prompt, clarity and specificity, and system vs. user prompts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 4 THEME — THE MANUSCRIPT / RED PEN
+   =========================================== */
+*{ box-sizing:border-box; }
+:root{
+  --bg:#F6F1E7;
+  --paper:#FCF9F1;
+  --ink:#241F1C;
+  --red:#B3261E;
+  --gold:#C9A227;
+  --gold-ink:#7A5E12;
+  --rule: rgba(36,31,28,.16);
+  --stage-bg:#1C1712;
+  --slide-bg:#F6F1E7;
+  --font-display:'Fraunces', serif;
+  --font-body:'Karla', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+  --font-hand:'Caveat', cursive;
+}
+body{ font-family:var(--font-body); }
+
+.slide{ background-color:var(--slide-bg); background-image:repeating-linear-gradient(to bottom, transparent 0 63px, var(--rule) 63px 64px); }
+.slide::before{ content:""; position:absolute; left:168px; top:0; bottom:0; width:2px; background:rgba(179,38,30,.28); pointer-events:none; z-index:0; }
+.slide::after{ content:""; position:absolute; top:0; right:0; width:0; height:0; border-style:solid; border-width:0 56px 56px 0; border-color:transparent rgba(36,31,28,.09) transparent transparent; pointer-events:none; z-index:0; }
+.stage-footer{ position:absolute; right:60px; bottom:34px; font-family:var(--font-mono); font-size:14px; color:var(--ink); opacity:.4; letter-spacing:.06em; z-index:6; pointer-events:none; }
+
+.slide-inner{ position:relative; z-index:2; height:100%; padding:86px 130px 90px 228px; display:flex; flex-direction:column; }
+.slide-inner.centered{ justify-content:center; }
+
+.kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--red); font-weight:500; margin:0 0 20px; }
+.slide-head{ font-family:var(--font-display); font-weight:600; font-size:56px; color:var(--ink); margin:0 0 14px; line-height:1.08; }
+.gold-rule{ width:120px; height:4px; background:var(--gold); margin:0 0 38px; border-radius:2px; }
+.lede{ font-family:var(--font-body); font-size:25px; color:var(--ink); opacity:.82; max-width:1340px; line-height:1.5; margin:0 0 34px; }
+
+h1.title-hero{ font-family:var(--font-display); font-weight:900; font-size:110px; color:var(--ink); margin:0 0 26px; line-height:1.03; max-width:1500px; }
+.subtitle-lead{ font-family:var(--font-display); font-weight:600; font-size:32px; color:var(--ink); opacity:.85; max-width:1220px; line-height:1.45; margin:0 0 40px; }
+.title-byline{ font-family:var(--font-mono); font-size:18px; color:var(--red); letter-spacing:.08em; margin-top:auto; }
+.pencil{ color:var(--red); }
+
+ul.bullet-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px; max-width:1560px; }
+ul.bullet-list li{ position:relative; padding-left:42px; font-size:27px; line-height:1.42; color:var(--ink); }
+ul.bullet-list li::before{ content:"—"; position:absolute; left:0; color:var(--red); font-weight:700; font-family:var(--font-mono); }
+ul.bullet-list.tight li{ font-size:24px; }
+
+ul.step-list{ list-style:none; margin:0; padding:0; counter-reset:step; display:flex; flex-direction:column; gap:18px; max-width:1560px; }
+ul.step-list li{ position:relative; padding-left:56px; font-size:24px; line-height:1.4; color:var(--ink); counter-increment:step; }
+ul.step-list li::before{ content:counter(step); position:absolute; left:0; top:-2px; width:36px; height:36px; border:2px solid var(--red); color:var(--red); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:18px; font-weight:600; }
+
+.card-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px; }
+.card-grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.card{ background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:26px 26px 24px; box-shadow:0 2px 0 rgba(36,31,28,.06); }
+.card h3{ font-family:var(--font-display); font-weight:600; font-size:23px; margin:0 0 10px; color:var(--ink); }
+.card h3 .num{ color:var(--red); font-family:var(--font-mono); font-size:17px; margin-right:8px; }
+.card p{ font-family:var(--font-body); font-size:18px; line-height:1.48; color:var(--ink); opacity:.82; margin:0; }
+
+.draft{ display:flex; flex-direction:column; gap:18px; max-width:1600px; }
+.draft-line{ display:flex; align-items:flex-start; gap:18px; }
+.draft-tag{ font-family:var(--font-mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; padding:6px 12px; border-radius:3px; white-space:nowrap; margin-top:6px; flex-shrink:0; }
+.draft-tag.weak{ background:rgba(179,38,30,.1); color:var(--red); border:1px solid rgba(179,38,30,.4); }
+.draft-tag.strong{ background:rgba(201,162,39,.15); color:var(--gold-ink); border:1px solid rgba(201,162,39,.5); }
+.draft-text{ font-family:var(--font-mono); font-size:22px; line-height:1.5; padding:18px 22px; border-radius:4px; flex:1; }
+.draft-text.weak{ background:rgba(179,38,30,.05); color:var(--red); text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:var(--red); }
+.draft-text.strong{ background:var(--paper); color:var(--ink); border-left:4px solid var(--gold); }
+
+.circled{ display:inline-block; border:3px solid var(--red); border-radius:52% 48% 51% 49% / 48% 52% 46% 54%; padding:2px 16px 6px; transform:rotate(-2deg); }
+.scribble{ font-family:var(--font-hand); font-weight:600; font-size:28px; color:var(--red); transform:rotate(-4deg); display:inline-block; margin-left:12px; }
+
+.script{ display:flex; flex-direction:column; gap:24px; max-width:1620px; }
+.turn-label{ font-family:var(--font-mono); font-size:16px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px; }
+.turn-label.system{ color:var(--red); }
+.turn-label.user{ color:var(--ink); }
+.turn-label.assistant{ color:var(--gold-ink); }
+.turn-text{ font-family:var(--font-mono); font-size:21px; line-height:1.5; color:var(--ink); }
+
+.toc{ display:flex; flex-direction:column; max-width:1660px; }
+.toc-item{ display:flex; align-items:baseline; gap:20px; padding:19px 0; border-bottom:1px dashed var(--rule); }
+.toc-num{ font-family:var(--font-mono); color:var(--red); font-size:22px; width:46px; flex-shrink:0; }
+.toc-title{ font-family:var(--font-display); font-weight:600; font-size:27px; flex-shrink:0; min-width:460px; color:var(--ink); }
+.toc-desc{ font-family:var(--font-body); font-size:19px; opacity:.75; flex:1; color:var(--ink); }
+
+table.version-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:19px; max-width:1660px; }
+table.version-table th, table.version-table td{ text-align:left; padding:15px 18px; border-bottom:1px solid var(--rule); vertical-align:top; }
+table.version-table th{ font-family:var(--font-mono); font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--red); border-bottom:2px solid var(--gold); }
+table.version-table td.mono{ font-family:var(--font-mono); font-size:17px; }
+table.version-table td.v{ font-family:var(--font-mono); color:var(--red); font-weight:600; }
+
+.pitfall-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+.pitfall{ display:flex; gap:16px; align-items:flex-start; background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:20px 22px; }
+.pitfall .mark{ font-family:var(--font-mono); font-size:24px; color:var(--red); font-weight:700; flex-shrink:0; line-height:1.3; }
+.pitfall p{ margin:0; font-size:18px; line-height:1.42; color:var(--ink); opacity:.85; }
+.pitfall strong{ display:block; font-family:var(--font-display); font-weight:600; font-size:20px; margin-bottom:5px; opacity:1; color:var(--ink); }
+
+.grade-row{ display:flex; align-items:center; gap:22px; margin:8px 0 30px; }
+.grade-old{ font-family:var(--font-mono); text-decoration:line-through; color:var(--red); font-size:38px; }
+.grade-arrow{ color:var(--red); font-size:36px; }
+.grade-new{ font-family:var(--font-display); font-weight:900; font-size:52px; color:var(--red); }
+
+.next-teaser{ display:flex; flex-direction:column; justify-content:center; height:100%; }
+.next-kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-ink); margin-bottom:22px; }
+
+/* ===== chrome outside the 16:9 stage ===== */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(36,31,28,.55); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--red); outline-offset: 4px; }
+
+.chrome-top{ position:fixed; top:18px; right:24px; z-index:1000; display:flex; gap:10px; align-items:center; font-family:var(--font-mono); font-size:13px; }
+.chrome-link{ color:var(--bg); background:rgba(36,31,28,.65); border:1px solid rgba(246,241,231,.25); padding:7px 14px; border-radius:3px; text-decoration:none; letter-spacing:.03em; }
+.chrome-link:hover{ border-color:var(--red); color:#fff; background:var(--red); }
+.breadcrumb{ position:fixed; top:20px; left:112px; z-index:1000; font-family:var(--font-mono); font-size:13px; letter-spacing:.03em; color:var(--bg); opacity:.8; background:rgba(36,31,28,.55); padding:7px 14px; border-radius:3px; }
+
+.counter{ font-family:var(--font-mono); font-size:14px; letter-spacing:.1em; color:var(--bg); background:rgba(36,31,28,.65); padding:8px 16px; border-radius:20px; border:1px solid rgba(246,241,231,.2); }
+
+.nav-btn{ position:fixed; bottom:22px; z-index:1000; font-family:var(--font-mono); font-size:14px; letter-spacing:.04em; color:var(--bg); background:rgba(36,31,28,.65); padding:9px 18px; border-radius:20px; text-decoration:none; border:1px solid rgba(246,241,231,.2); transition:background .2s ease, color .2s ease; }
+.nav-btn:hover{ background:var(--red); color:#fff; }
+.nav-btn.prev{ left:24px; }
+.nav-btn.next{ right:24px; }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <div class="slide">
+      <div class="slide-inner centered">
+        <div class="kicker" data-editable>GenAI Foundations · Week 4 · Class 1</div>
+        <h1 class="title-hero" data-editable>Prompt Structure <span class="pencil">&amp;</span> Best Practices</h1>
+        <p class="subtitle-lead" data-editable>Every great answer starts as a rough draft. This class is about learning to write — and revise — the instructions you give a model.</p>
+        <div class="title-byline" data-editable>THE MANUSCRIPT — WEEK 4 · CLASS 1 OF 3</div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 2: AGENDA -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Today's Draft</div>
+        <h2 class="slide-head" data-editable>What We're Revising Today</h2>
+        <div class="gold-rule"></div>
+        <div class="toc">
+          <div class="toc-item"><span class="toc-num">01</span><span class="toc-title" data-editable>The Anatomy of a Prompt</span><span class="toc-desc" data-editable>The five ingredients every reliable prompt needs.</span></div>
+          <div class="toc-item"><span class="toc-num">02</span><span class="toc-title" data-editable>Clarity &amp; Specificity</span><span class="toc-desc" data-editable>Why vague instructions produce vague — or wrong — answers.</span></div>
+          <div class="toc-item"><span class="toc-num">03</span><span class="toc-title" data-editable>System vs. User Prompts</span><span class="toc-desc" data-editable>Two different voices, two different jobs.</span></div>
+          <div class="toc-item"><span class="toc-num">04</span><span class="toc-title" data-editable>Order &amp; Structure</span><span class="toc-desc" data-editable>Why the sequence of your instructions changes the output.</span></div>
+          <div class="toc-item"><span class="toc-num">05</span><span class="toc-title" data-editable>Workshop: Revising a Draft</span><span class="toc-desc" data-editable>Turning a rough draft into a strong one, live.</span></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 3: CONCEPT — WHAT IS A PROMPT -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>A Prompt Is a Specification, Not a Question</h2>
+        <div class="gold-rule"></div>
+        <p class="lede" data-editable>A prompt is the entire instruction set a model receives before it starts generating — there is no other channel for intent.</p>
+        <ul class="bullet-list">
+          <li data-editable>The model only knows what's in the prompt — it has no memory of what you meant to say.</li>
+          <li data-editable>Ambiguity in the instructions becomes ambiguity — or invention — in the output.</li>
+          <li data-editable>Small wording changes, like a missing word or an unclear pronoun, can shift the entire response.</li>
+          <li data-editable>Good prompting is drafting: write, read the output critically, revise, repeat.</li>
+          <li data-editable>Treat your first prompt as a first draft, never as the final version.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 4: CONCEPT — ANATOMY CARDS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Five Ingredients, One Instruction</h2>
+        <div class="gold-rule"></div>
+        <div class="card-grid">
+          <div class="card"><h3><span class="num">01</span>Role / Context</h3><p data-editable>Who should the model act as, and what situation are we in?</p></div>
+          <div class="card"><h3><span class="num">02</span>Task</h3><p data-editable>The one specific action you want performed, stated as a verb.</p></div>
+          <div class="card"><h3><span class="num">03</span>Input Data</h3><p data-editable>The actual content to work on — text, data, or a question.</p></div>
+          <div class="card"><h3><span class="num">04</span>Constraints &amp; Format</h3><p data-editable>Length, tone, structure, and what to leave out.</p></div>
+          <div class="card"><h3><span class="num">05</span>Examples <span style="opacity:.6;font-weight:400;">(optional)</span></h3><p data-editable>A sample of the output you want, when words aren't enough.</p></div>
+          <div class="card"><h3><span class="num">06</span>Success Criteria</h3><p data-editable>How you — or the model — will know the answer is good enough.</p></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 5: CONCEPT — CLARITY & SPECIFICITY (draft motif) -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Vague In, Vague Out</h2>
+        <div class="gold-rule"></div>
+        <div class="draft">
+          <div class="draft-line">
+            <span class="draft-tag weak">Weak draft</span>
+            <span class="draft-text weak" data-editable>Write <span class="circled">something</span> about our product.<span class="scribble">↖ which product? what output?</span></span>
+          </div>
+          <div class="draft-line">
+            <span class="draft-tag strong">Revision</span>
+            <span class="draft-text strong" data-editable>Write a 3-sentence product description for a stainless-steel water bottle, for an e-commerce listing, in a friendly upbeat tone, under 40 words.</span>
+          </div>
+        </div>
+        <ul class="bullet-list" style="margin-top:34px;">
+          <li data-editable>The weak prompt has no audience, no format, no length, and no tone.</li>
+          <li data-editable>The revision specifies medium, length, tone, and subject in one sentence.</li>
+          <li data-editable>Specificity isn't about writing more — it's about removing every open question the model would otherwise have to guess at.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 6: CONCEPT — SYSTEM VS USER -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Two Voices, Two Jobs</h2>
+        <div class="gold-rule"></div>
+        <div class="script">
+          <div><div class="turn-label system" data-editable>System.</div><div class="turn-text" data-editable>"You are a patient technical writing tutor. Always explain concepts using a real-world analogy before the formal definition."</div></div>
+          <div><div class="turn-label user" data-editable>User.</div><div class="turn-text" data-editable>"Explain what a variable is."</div></div>
+          <div><div class="turn-label assistant" data-editable>Assistant.</div><div class="turn-text" data-editable>"Think of a variable like a labeled box you can put things in and swap out later... Formally, a variable is a named location that stores a value."</div></div>
+        </div>
+        <ul class="bullet-list tight" style="margin-top:28px;">
+          <li data-editable>System prompt sets standing rules — persona, tone, boundaries — and persists across the whole conversation.</li>
+          <li data-editable>User prompt is the specific request for this turn — it changes every message.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 7: CONCEPT — ORDER & STRUCTURE -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Sequence Changes the Answer</h2>
+        <div class="gold-rule"></div>
+        <ul class="bullet-list">
+          <li data-editable>Put the most important instruction first — and briefly repeat it at the end of long prompts.</li>
+          <li data-editable>Use delimiters — triple quotes, XML-style tags, or headers — to separate instructions from data.</li>
+          <li data-editable>Structure long prompts in order: role → task → data → constraints → question.</li>
+          <li data-editable>Numbered steps for multi-part tasks reduce the model skipping or merging steps.</li>
+        </ul>
+        <div class="draft-text strong" style="margin-top:30px; max-width:1200px;" data-editable>### INSTRUCTIONS<br>Summarize the text below in 2 bullet points.<br><br>### TEXT<br>"""<br>{{customer_review}}<br>"""</div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 8: DEMO WALKTHROUGH -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Workshop</div>
+        <h2 class="slide-head" data-editable>One Prompt, Three Drafts</h2>
+        <div class="gold-rule"></div>
+        <table class="version-table">
+          <tr><th>Version</th><th>Prompt</th><th>What Happened</th></tr>
+          <tr><td class="v">V1</td><td class="mono" data-editable>"Summarize this."</td><td data-editable>Too short, missing key detail, no usable format.</td></tr>
+          <tr><td class="v">V2</td><td class="mono" data-editable>"Summarize this review in 2 sentences."</td><td data-editable>Better — but the tone is off and it sounds robotic.</td></tr>
+          <tr><td class="v">V3</td><td class="mono" data-editable>"You are a support analyst. Summarize the review below in 2 sentences, noting the complaint and sentiment."</td><td data-editable>Consistent, structured, ready for a dashboard.</td></tr>
+        </table>
+        <p class="lede" style="margin-top:30px;" data-editable>See this comparison run live against a real model in <strong>class-1.ipynb</strong> — Concept 5.</p>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 9: EASTER EGG — GRADED DRAFT -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>The Red Pen</div>
+        <h2 class="slide-head" data-editable>Graded Like an Essay</h2>
+        <div class="gold-rule"></div>
+        <div class="grade-row">
+          <span class="grade-old">C+</span><span class="grade-arrow">→</span><span class="circled grade-new">A−</span>
+        </div>
+        <div class="draft">
+          <div class="draft-line">
+            <span class="draft-tag weak">First draft</span>
+            <span class="draft-text weak" data-editable>Tell me about machine learning.</span>
+          </div>
+          <div class="draft-line">
+            <span class="draft-tag strong">Revision</span>
+            <span class="draft-text strong" data-editable>You're writing for a high-school audience with no math background. In 4 short paragraphs, explain what machine learning is, give one everyday example, and end with one common misconception. Avoid jargon.<span class="scribble">this is the whole trick →</span></span>
+          </div>
+        </div>
+        <ul class="bullet-list tight" style="margin-top:26px;">
+          <li data-editable>The words changed, but so did the thinking: who's reading this, how long, what should it end on?</li>
+          <li data-editable>Every strong prompt is really a second — or fifth — draft; nobody writes the A− version first.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 10: PITFALLS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Watch For This</div>
+        <h2 class="slide-head" data-editable>Common Pitfalls</h2>
+        <div class="gold-rule"></div>
+        <div class="pitfall-grid">
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Too Vague</strong><span data-editable>"Write about X" leaves every decision to the model.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>One Prompt, Five Jobs</strong><span data-editable>Stacking unrelated tasks in one instruction confuses priority.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>No Format Specified</strong><span data-editable>The model guesses at length and structure — it won't fit your use case.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Assuming Memory</strong><span data-editable>The model won't recall what you meant three messages ago unless it's in context.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Contradictory Instructions</strong><span data-editable>"Be concise" and "cover everything in detail" fight each other.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Burying the Ask</strong><span data-editable>The real question hidden in paragraph three of a long prompt gets missed.</span></p></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 11: CHALLENGE PREVIEW -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Hands-On in class-1.ipynb</div>
+        <h2 class="slide-head" data-editable>Your Turn: The Workshop</h2>
+        <div class="gold-rule"></div>
+        <ul class="step-list">
+          <li data-editable>Diagnose a Draft — identify what's missing from three real weak prompts.</li>
+          <li data-editable>Add Constraints — rewrite a prompt to add tone, length, and format.</li>
+          <li data-editable>Split the Stack — break a five-job prompt into a clean, single-task prompt.</li>
+          <li data-editable>System vs. User — write a system prompt and test it against three different user turns.</li>
+          <li data-editable>Write Your Own A− — take one of your own real prompts, grade it, and revise it.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 12: RECAP -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Recap</div>
+        <h2 class="slide-head" data-editable>What We Revised</h2>
+        <div class="gold-rule"></div>
+        <ul class="bullet-list">
+          <li data-editable>A prompt is a specification: role, task, data, constraints, and — sometimes — examples.</li>
+          <li data-editable>Clarity beats cleverness — specificity removes guesswork.</li>
+          <li data-editable>System prompts set standing rules; user prompts ask the specific question.</li>
+          <li data-editable>Order matters: lead with the important instruction, use delimiters for structure.</li>
+          <li data-editable>Every good prompt is a revised draft, not a first attempt.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+    <!-- 13: NEXT CLASS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="next-teaser">
+          <div class="next-kicker" data-editable>Next Class</div>
+          <h2 class="slide-head" data-editable>Zero-Shot, Few-Shot &amp; Role-Based Prompting</h2>
+          <div class="gold-rule"></div>
+          <p class="lede" data-editable>We'll give the model examples to learn from instead of just instructions — and hand it a persona to think from.</p>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 1</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+<div class="chrome-top">
+  <a class="chrome-link" href="../index.html">Course</a>
+  <a class="chrome-link" href="index.html">Week 4</a>
+</div>
+<div class="breadcrumb">GenAI Foundations / Week 4 / Class 1</div>
+<div class="deck-controls"><div class="counter" id="slideCounter">01 / 13</div></div>
+<a class="nav-btn prev" href="index.html">← Prev</a>
+<a class="nav-btn next" href="class-2.html">Next →</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+</script>
+<script>
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

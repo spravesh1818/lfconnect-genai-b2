@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foundations of Generative AI &amp; LLM Applications</title>
+<meta name="description" content="A 6-week, 18-class course: Python foundations, LLMs, no-code builders, prompt engineering, agents, and RAG chatbots.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wght@500;700;900&family=Chakra+Petch:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dark-void:#0A0E27;
+  --deep-navy:#0F1B3D;
+  --panel:#131a3a;
+  --cyan:#5EDCF4;
+  --pink:#F0A6CA;
+  --yellow:#F4D03F;
+  --lavender:#E2D5F2;
+  --text:#EAF0FF;
+  --muted:#8fa0c9;
+  --font-display:'Tektur', sans-serif;
+  --font-body:'Chakra Petch', sans-serif;
+  --font-mono:'Space Mono', monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:radial-gradient(ellipse at 20% 0%, var(--deep-navy) 0%, var(--dark-void) 55%);
+  color:var(--text);
+  font-family:var(--font-body);
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(94,220,244,.06) 1px, transparent 1px),linear-gradient(90deg, rgba(94,220,244,.06) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode:overlay;
+}
+.stars{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none;}
+.stars span{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;opacity:.5;animation:twinkle 3.4s ease-in-out infinite;}
+@keyframes twinkle{0%,100%{opacity:.1;}50%{opacity:.85;}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important;}}
+
+.wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:64px 32px 120px;}
+
+.hud{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:13px;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase;border-bottom:1px solid rgba(94,220,244,.25);padding-bottom:18px;margin-bottom:56px;flex-wrap:wrap;gap:12px;}
+
+.hero{text-align:left;margin-bottom:80px;opacity:0;animation:rise .8s cubic-bezier(.16,1,.3,1) .1s forwards;}
+.hero .kicker{display:inline-block;font-family:var(--font-mono);font-size:14px;letter-spacing:.22em;color:var(--yellow);text-transform:uppercase;border:2px solid var(--yellow);box-shadow:4px 4px 0 var(--yellow);padding:8px 16px;margin-bottom:28px;}
+.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(38px,6vw,84px);line-height:1.04;
+  text-shadow:3px 3px 0 var(--pink), 6px 6px 0 var(--cyan);margin-bottom:28px;max-width:1000px;}
+.hero h1 span{color:var(--cyan);}
+.hero p{font-size:clamp(16px,1.6vw,22px);color:var(--lavender);max-width:760px;line-height:1.6;margin-bottom:36px;}
+.hero .stat-row{display:flex;gap:16px;flex-wrap:wrap;}
+.stat{font-family:var(--font-mono);font-size:15px;color:var(--dark-void);background:var(--cyan);padding:10px 18px;box-shadow:4px 4px 0 rgba(0,0,0,.5);font-weight:700;}
+.stat:nth-child(2){background:var(--pink);}
+.stat:nth-child(3){background:var(--yellow);}
+
+.section-label{font-family:var(--font-mono);font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+
+.levels{display:grid;grid-template-columns:repeat(auto-fit, minmax(320px,1fr));gap:24px;margin-bottom:72px;}
+.level-card{
+  position:relative;background:var(--panel);border:2px solid rgba(94,220,244,.2);
+  padding:28px 26px 26px;text-decoration:none;color:var(--text);
+  transition:transform .25s cubic-bezier(.16,1,.3,1), border-color .25s ease, box-shadow .25s ease;
+  opacity:0;animation:rise .7s cubic-bezier(.16,1,.3,1) forwards;
+  display:flex;flex-direction:column;gap:14px;
+}
+.level-card:nth-child(1){animation-delay:.15s;}
+.level-card:nth-child(2){animation-delay:.22s;}
+.level-card:nth-child(3){animation-delay:.29s;}
+.level-card:nth-child(4){animation-delay:.36s;}
+.level-card:nth-child(5){animation-delay:.43s;}
+.level-card:nth-child(6){animation-delay:.5s;}
+.level-card:hover{transform:translateY(-6px);box-shadow:8px 8px 0 var(--card-accent, var(--cyan));border-color:var(--card-accent, var(--cyan));}
+.level-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.level-num{font-family:var(--font-display);font-weight:900;font-size:46px;color:var(--card-accent, var(--cyan));line-height:1;}
+.level-dot{width:14px;height:14px;border-radius:50%;background:var(--card-accent, var(--cyan));box-shadow:0 0 12px var(--card-accent, var(--cyan));margin-top:8px;}
+.level-title{font-family:var(--font-display);font-weight:700;font-size:24px;line-height:1.25;}
+.level-theme{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.level-topics{font-size:15px;color:var(--lavender);line-height:1.6;opacity:.85;}
+.level-footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:12px;color:var(--card-accent, var(--cyan));letter-spacing:.08em;text-transform:uppercase;padding-top:14px;border-top:1px dashed rgba(255,255,255,.12);}
+
+.capstone{
+  position:relative;border:2px solid var(--yellow);background:linear-gradient(135deg, rgba(244,208,63,.08), rgba(240,166,202,.06));
+  padding:40px;opacity:0;animation:rise .8s cubic-bezier(.16,1,.3,1) .6s forwards;
+}
+.capstone .kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.2em;color:var(--yellow);text-transform:uppercase;margin-bottom:14px;}
+.capstone h2{font-family:var(--font-display);font-weight:900;font-size:clamp(26px,3.4vw,40px);margin-bottom:16px;}
+.capstone p{color:var(--lavender);max-width:760px;line-height:1.6;margin-bottom:22px;}
+.capstone ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;list-style:none;}
+.capstone li{font-family:var(--font-mono);font-size:13px;color:var(--text);background:rgba(255,255,255,.04);border:1px solid rgba(244,208,63,.3);padding:12px 14px;}
+
+footer{margin-top:64px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--muted);letter-spacing:.08em;}
+
+@keyframes rise{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="wrap">
+  <div class="hud">
+    <span>SYS://GENAI-FOUNDATIONS</span>
+    <span>6 WEEKS · 18 CLASSES · 1 CAPSTONE</span>
+  </div>
+
+  <section class="hero">
+    <div class="kicker">Course Select</div>
+    <h1>Foundations of<br>Generative <span>AI</span> &amp; LLM Applications</h1>
+    <p>A hands-on path from Python basics to prompt engineering, AI agents, and retrieval-augmented chatbots. Six weeks, three classes each — pick a week to start.</p>
+    <div class="stat-row">
+      <div class="stat">BEGINNER FRIENDLY</div>
+      <div class="stat">PYTHON PREFERRED</div>
+      <div class="stat">CAPSTONE PROJECT</div>
+    </div>
+  </section>
+
+  <div class="section-label">// Select a Week</div>
+  <div class="levels">
+    <a class="level-card" href="week-1/index.html" style="--card-accent:#FFD43B;">
+      <div class="level-top"><span class="level-num">01</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">Python Foundations for Generative AI</div>
+        <div class="level-theme">Theme: The Interpreter</div>
+      </div>
+      <div class="level-topics">Syntax &amp; control flow · text &amp; JSON · calling APIs · your first AI script</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+    <a class="level-card" href="week-2/index.html" style="--card-accent:#d946ef;">
+      <div class="level-top"><span class="level-num">02</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">Introduction to LLMs</div>
+        <div class="level-theme">Theme: The Black Box</div>
+      </div>
+      <div class="level-topics">How LLMs work · tokens, temperature &amp; context · limitations &amp; responsible AI</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+    <a class="level-card" href="week-3/index.html" style="--card-accent:#FF6B35;">
+      <div class="level-top"><span class="level-num">03</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">No-Code &amp; Low-Code AI Builders</div>
+        <div class="level-theme">Theme: The Workflow Canvas</div>
+      </div>
+      <div class="level-topics">ChatGPT &amp; Claude workflows · custom GPTs/Assistants · Zapier &amp; Make</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+    <a class="level-card" href="week-4/index.html" style="--card-accent:#B3261E;">
+      <div class="level-top"><span class="level-num">04</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">Prompt Engineering</div>
+        <div class="level-theme">Theme: The Manuscript</div>
+      </div>
+      <div class="level-topics">Prompt structure · zero/few-shot &amp; roles · structured output &amp; debugging</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+    <a class="level-card" href="week-5/index.html" style="--card-accent:#7fd1ff;">
+      <div class="level-top"><span class="level-num">05</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">Introduction to AI Agents</div>
+        <div class="level-theme">Theme: The Blueprint</div>
+      </div>
+      <div class="level-topics">What makes an agent · the plan → act → observe loop · building a simple agent</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+    <a class="level-card" href="week-6/index.html" style="--card-accent:#B08D57;">
+      <div class="level-top"><span class="level-num">06</span><span class="level-dot"></span></div>
+      <div>
+        <div class="level-title">Foundations of RAG &amp; Chatbots</div>
+        <div class="level-theme">Theme: The Card Catalog</div>
+      </div>
+      <div class="level-topics">Why RAG · embeddings &amp; vector DBs · building a simple RAG chatbot</div>
+      <div class="level-footer"><span>3 Classes</span><span>Start →</span></div>
+    </a>
+  </div>
+
+  <div class="section-label">// Bonus Level</div>
+  <div class="capstone">
+    <div class="kicker">Capstone Project — Practical AI Assistant</div>
+    <h2>Ship something real.</h2>
+    <p>After Week 6, learners pick one deliverable to build end-to-end, combining everything from the six weeks.</p>
+    <ul>
+      <li>FAQ / customer support chatbot</li>
+      <li>Resume or content-generation assistant</li>
+      <li>Simple document Q&amp;A bot</li>
+      <li>No-code or hybrid AI assistant</li>
+    </ul>
+  </div>
+
+  <footer>Foundations of Generative AI &amp; LLM Applications — hosted on GitHub Pages</footer>
+</div>
+<script>
+const starsEl = document.getElementById('stars');
+for (let i=0;i<60;i++){
+  const s = document.createElement('span');
+  s.style.left = Math.random()*100+'%';
+  s.style.top = Math.random()*100+'%';
+  s.style.animationDelay = (Math.random()*3.4)+'s';
+  starsEl.appendChild(s);
+}
+</script>
+</body>
+</html>

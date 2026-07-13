@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 6 — Foundations of RAG &amp; Chatbots | GenAI Foundations</title>
+<meta name="description" content="Week 6 of GenAI Foundations: Why RAG, Embeddings & Vector Databases, and Building a Simple RAG Chatbot.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Source+Sans+3:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1E7D0;
+  --forest:#2F5233;
+  --brass:#B08D57;
+  --ink:#2B1D14;
+  --card:#FBF4E2;
+  --font-display:'Libre Caslon Display', serif;
+  --font-body:'Source Sans 3', sans-serif;
+  --font-mono:'Courier Prime', monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-body);
+  background-color:var(--bg);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 42px, rgba(176,141,87,.14) 42px, rgba(176,141,87,.14) 43px);
+  color:var(--ink);
+  min-height:100vh;
+  line-height:1.5;
+}
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+.wrap{ max-width:1080px; margin:0 auto; padding:56px 28px 90px; position:relative; }
+
+.top-nav{ display:flex; justify-content:space-between; align-items:center; margin-bottom:48px; flex-wrap:wrap; gap:14px; }
+.top-nav a{ font-family:var(--font-mono); font-size:14px; color:var(--forest); text-decoration:none; border:1px solid var(--brass); padding:8px 16px; border-radius:4px; letter-spacing:.03em; }
+.top-nav a:hover{ background:var(--forest); color:var(--bg); }
+
+.drawer-label{ font-family:var(--font-mono); font-size:14px; letter-spacing:.28em; text-transform:uppercase; color:var(--forest); text-align:center; margin-bottom:10px; }
+
+.header-card{ position:relative; border:3px solid var(--ink); background:var(--card); padding:52px 44px 44px; text-align:center; margin-bottom:56px; }
+.punch{ position:absolute; top:-15px; width:28px; height:28px; border-radius:50%; background:var(--ink); box-shadow: 0 0 0 4px var(--bg), 0 0 0 6px var(--brass); }
+.punch.l{ left:calc(50% - 90px); }
+.punch.r{ left:calc(50% + 62px); }
+.header-kicker{ font-family:var(--font-mono); font-size:15px; letter-spacing:.3em; text-transform:uppercase; color:var(--brass); margin-bottom:18px; }
+.header-title{ font-family:var(--font-display); font-size:clamp(36px,6vw,60px); color:var(--ink); line-height:1.14; margin-bottom:20px; }
+.header-desc{ font-size:19px; color:var(--ink); max-width:640px; margin:0 auto; opacity:.88; }
+.header-meta{ margin-top:26px; font-family:var(--font-mono); font-size:14px; color:var(--forest); letter-spacing:.05em; }
+
+.section-label{ font-family:var(--font-mono); font-size:14px; letter-spacing:.2em; text-transform:uppercase; color:var(--forest); margin-bottom:20px; padding-bottom:10px; border-bottom:2px solid var(--brass); }
+
+.class-list{ display:flex; flex-direction:column; gap:22px; margin-bottom:56px; }
+.class-card{ display:block; text-decoration:none; color:var(--ink); position:relative; border:2px solid var(--forest); background:rgba(255,255,255,.4); border-radius:6px; padding:26px 30px 24px 100px; transition:transform .2s ease, box-shadow .2s ease; }
+.class-card:hover{ transform:translateX(4px); box-shadow:6px 6px 0 rgba(176,141,87,.4); }
+.class-num{ position:absolute; left:26px; top:50%; transform:translateY(-50%); font-family:var(--font-display); font-size:44px; color:var(--brass); line-height:1; }
+.class-tag{ font-family:var(--font-mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--forest); margin-bottom:6px; }
+.class-title{ font-family:var(--font-display); font-size:27px; color:var(--ink); margin-bottom:8px; }
+.class-desc{ font-size:17px; color:var(--ink); opacity:.85; }
+.class-arrow{ position:absolute; right:26px; top:50%; transform:translateY(-50%); font-family:var(--font-mono); font-size:14px; color:var(--forest); letter-spacing:.05em; }
+
+.capstone-card{ position:relative; border:3px double var(--forest); background:rgba(47,82,51,.06); padding:36px 40px; }
+.capstone-kicker{ font-family:var(--font-mono); font-size:14px; letter-spacing:.22em; text-transform:uppercase; color:var(--forest); margin-bottom:14px; }
+.capstone-title{ font-family:var(--font-display); font-size:30px; margin-bottom:14px; }
+.capstone-card p{ font-size:18px; margin-bottom:18px; max-width:680px; }
+.capstone-card a{ font-family:var(--font-mono); font-size:15px; color:var(--bg); background:var(--forest); padding:12px 22px; border-radius:6px; text-decoration:none; letter-spacing:.04em; display:inline-block; }
+.capstone-stamp{ position:absolute; right:34px; bottom:28px; transform:rotate(-10deg); border:3px double var(--brass); border-radius:10px; padding:10px 16px; font-family:var(--font-mono); font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); opacity:.6; }
+
+footer{ text-align:center; margin-top:56px; font-family:var(--font-mono); font-size:12px; color:var(--forest); letter-spacing:.06em; opacity:.75; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-nav">
+    <a href="../index.html">← Back to Course</a>
+    <a href="../index.html">GenAI Foundations Home</a>
+  </div>
+
+  <div class="drawer-label">Drawer No. 6 — R A – R A Z</div>
+  <div class="header-card">
+    <span class="punch l"></span><span class="punch r"></span>
+    <div class="header-kicker">Week 6 · The Card Catalog</div>
+    <h1 class="header-title">Foundations of RAG &amp; Chatbots</h1>
+    <p class="header-desc">Grounding language models in real documents: why parametric memory runs out, how embeddings measure meaning, and how to assemble a working retrieval-augmented chatbot from scratch.</p>
+    <div class="header-meta">CALL NO. RAG 006.3 &nbsp;·&nbsp; 3 CLASSES &nbsp;·&nbsp; FINAL WEEK BEFORE THE CAPSTONE</div>
+  </div>
+
+  <div class="section-label">Classes in This Drawer</div>
+  <div class="class-list">
+    <a class="class-card" href="class-1.html">
+      <span class="class-num">1</span>
+      <div class="class-tag">Card 6.1</div>
+      <div class="class-title">Why Retrieval-Augmented Generation?</div>
+      <div class="class-desc">The limits of parametric knowledge, what grounding means, and a first look at the RAG architecture end to end.</div>
+      <span class="class-arrow">Start →</span>
+    </a>
+    <a class="class-card" href="class-2.html">
+      <span class="class-num">2</span>
+      <div class="class-tag">Card 6.2</div>
+      <div class="class-title">Embeddings &amp; Vector Databases</div>
+      <div class="class-desc">What embeddings are, how cosine similarity ranks meaning, and where Chroma, FAISS, and Pinecone fit in.</div>
+      <span class="class-arrow">Start →</span>
+    </a>
+    <a class="class-card" href="class-3.html">
+      <span class="class-num">3</span>
+      <div class="class-tag">Card 6.3</div>
+      <div class="class-title">Building a Simple RAG Chatbot</div>
+      <div class="class-desc">Chunking documents, wiring up retrieval and generation, and the limitations to plan around next.</div>
+      <span class="class-arrow">Start →</span>
+    </a>
+  </div>
+
+  <div class="section-label">Last Card in the Drawer</div>
+  <div class="capstone-card">
+    <div class="capstone-kicker">This Is the Final Week</div>
+    <h2 class="capstone-title">Ready for the Capstone?</h2>
+    <p>Once you've finished all three classes here, head back to the course home page for the capstone project brief — you'll pick one deliverable (an FAQ chatbot, a resume assistant, a document Q&amp;A bot, or a no-code/hybrid assistant) and build it end to end using everything from the six weeks.</p>
+    <a href="../index.html">See the Capstone on the Course Home →</a>
+    <span class="capstone-stamp">Final Week</span>
+  </div>
+
+  <footer>Foundations of Generative AI &amp; LLM Applications — Week 6 · The Card Catalog</footer>
+</div>
+</body>
+</html>

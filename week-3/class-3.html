@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 · Class 3 — Automation with Zapier &amp; Make</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   THEME: THE WORKFLOW CANVAS (Week 3)
+   =========================================== */
+:root{
+  --bg:#FBF6EE;
+  --ink:#1a1a1a;
+  --orange:#FF6B35;
+  --teal:#0EA5A0;
+  --yellow:#FFD166;
+  --muted:#6b6459;
+  --stage-bg:#e9e2d3;
+  --slide-bg:#FBF6EE;
+  --font-display:'Sora',sans-serif;
+  --font-body:'Work Sans',sans-serif;
+}
+*{box-sizing:border-box;}
+body{font-family:var(--font-body);}
+.slide{
+  background-color:var(--bg);
+  background-image:radial-gradient(rgba(26,26,26,.09) 1.6px, transparent 1.6px);
+  background-size:30px 30px;
+  color:var(--ink);
+}
+.slide-inner{ position:absolute; inset:0; padding:84px 112px 78px; display:flex; flex-direction:column; }
+
+.kicker{ font-family:var(--font-display); font-weight:700; font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:var(--orange); margin:0 0 16px; }
+.kicker.teal{color:var(--teal);}
+.slide-title{ font-family:var(--font-display); font-weight:800; font-size:56px; line-height:1.1; margin:0 0 22px; color:var(--ink); max-width:1560px; }
+.slide-sub{ font-size:26px; line-height:1.55; color:#3a352c; max-width:1280px; margin:0 0 6px; font-weight:400; }
+.slide-sub strong{font-weight:500;color:var(--ink);}
+
+/* deck chrome */
+.deck-controls{ display:flex; align-items:center; gap:10px; background:#fff; border:2px solid var(--ink); border-radius:999px; padding:10px 22px; font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--ink); box-shadow:4px 4px 0 rgba(26,26,26,.14); }
+.deck-controls a{color:var(--teal); text-decoration:none;}
+.deck-controls a:hover{text-decoration:underline;}
+.deck-controls .sep{color:rgba(26,26,26,.3);}
+.deck-controls .counter{color:var(--orange); font-variant-numeric:tabular-nums;}
+
+.nav-btn{ position:fixed; bottom:22px; z-index:1000; font-family:var(--font-display); font-weight:700; font-size:15px; text-decoration:none; color:var(--ink); background:#fff; border:2px solid var(--ink); border-radius:999px; padding:12px 22px; box-shadow:4px 4px 0 rgba(26,26,26,.14); transition:transform .15s ease; }
+.nav-btn:hover{ transform:translateY(-2px); }
+.nav-prev{ left:22px; }
+.nav-next{ right:22px; background:var(--orange); color:#fff; }
+
+/* inline editing */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(26,26,26,.6); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--orange); outline-offset: 4px; }
+
+/* node-card motif */
+.node-card{ position:relative; background:#fff; border:2px solid var(--ink); border-radius:20px; padding:28px 30px 24px 34px; box-shadow:7px 7px 0 rgba(26,26,26,.10); }
+.node-dot{ position:absolute; top:18px; left:18px; width:15px; height:15px; border-radius:50%; }
+.node-dot.trigger{background:var(--orange);}
+.node-dot.action{background:var(--teal);}
+.node-dot.info{background:var(--yellow);}
+.node-label{ display:block; font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 8px 24px; }
+.node-card h3{ font-family:var(--font-display); font-weight:700; font-size:23px; margin:0 0 10px 24px; line-height:1.25; }
+.node-card p{ font-size:20px; line-height:1.45; margin:0 24px 0 24px; color:#3a352c; }
+.drag-handles{ position:absolute; top:50%; right:14px; transform:translateY(-50%); color:rgba(26,26,26,.25); font-size:20px; letter-spacing:2px; font-weight:700; }
+
+.card-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:26px; }
+.card-grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+
+/* bullet list */
+ul.bullet-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:20px; }
+ul.bullet-list li{ font-size:27px; line-height:1.45; padding-left:42px; position:relative; }
+ul.bullet-list li::before{ content:''; position:absolute; left:0; top:9px; width:15px; height:15px; border-radius:50%; background:var(--orange); }
+ul.bullet-list li:nth-child(even)::before{ background:var(--teal); }
+ul.bullet-list li strong{font-weight:500;}
+
+/* connector / trigger-action pulse (easter egg) */
+.ta-row{ display:flex; align-items:center; gap:0; }
+.ta-node{ width:420px; }
+.ta-node .node-card{ padding:22px 24px 20px 30px; }
+.ta-connector{ width:200px; height:70px; flex:0 0 auto; margin:0 -6px; position:relative; }
+.pulse-path{ animation: pulseDash 1.1s linear infinite; }
+@keyframes pulseDash{ to{ stroke-dashoffset:-32; } }
+
+/* table */
+table.compare{ width:100%; border-collapse:collapse; font-size:21px; }
+table.compare th{ font-family:var(--font-display); font-weight:700; text-align:left; padding:12px 16px; border-bottom:3px solid var(--ink); }
+table.compare td{ padding:12px 16px; border-bottom:1px solid rgba(26,26,26,.15); vertical-align:top; }
+table.compare tr:nth-child(odd) td{ background:rgba(255,209,102,.16); }
+table.compare td:first-child, table.compare th:first-child{ font-weight:600; width:24%; }
+
+/* code block */
+.code-block{ background:#1a1a1a; color:#f5f0e6; font-family:'SFMono-Regular',Consolas,Menlo,monospace; font-size:19px; line-height:1.65; border-radius:16px; padding:26px 30px; }
+.code-block .k{color:#FFD166;} .code-block .s{color:#7EE787;} .code-block .c{color:#9aa0a6;} .code-block .m{color:#0EA5A0;}
+
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:36px; flex:1; }
+.pill{ display:inline-block; font-family:var(--font-display); font-weight:700; font-size:14px; letter-spacing:.08em; text-transform:uppercase; background:var(--yellow); color:var(--ink); padding:6px 14px; border-radius:999px; border:2px solid var(--ink); }
+
+.title-slide .slide-title{ font-size:96px; max-width:1650px; }
+.title-slide .brand-row{ display:flex; align-items:center; gap:16px; margin-bottom:36px; }
+.title-slide .brand-dot{ width:20px;height:20px;border-radius:50%; background:var(--orange); box-shadow: 26px 0 0 var(--teal), 52px 0 0 var(--yellow); }
+.footer-chrome{ margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; }
+.footer-chrome .theme-tag{ font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--muted); }
+.recap-list li::before{ background:var(--teal); }
+
+/* chain of 3 nodes for workflow example */
+.chain-row3{ display:flex; align-items:stretch; gap:0; }
+.chain3-node{ width:420px; display:flex; flex-direction:column; }
+.chain3-node .node-card{ flex:1; }
+.chain3-connector{ width:80px; height:auto; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+.chain-caption{ font-size:18px; color:var(--muted); margin:14px 24px 0; line-height:1.4; }
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- SLIDE 1: TITLE -->
+    <section class="slide title-slide">
+      <div class="slide-inner">
+        <div class="brand-row">
+          <span class="brand-dot"></span>
+          <span class="kicker" data-editable style="margin:0;">Week 3 · Class 3 · The Workflow Canvas</span>
+        </div>
+        <h1 class="slide-title" data-editable>Automation with<br>Zapier &amp; Make</h1>
+        <p class="slide-sub" data-editable>Wiring AI steps into no-code trigger-action workflows — and knowing when no-code is enough versus when you need to write code.</p>
+        <div class="footer-chrome">
+          <span class="theme-tag" data-editable>No-Code &amp; Low-Code AI Builders</span>
+          <span class="pill">Trigger → Action</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: AGENDA + EASTER EGG -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Today's Map</div>
+        <h1 class="slide-title" data-editable>Today's Workflow</h1>
+        <ul class="bullet-list" style="margin-bottom:40px;">
+          <li data-editable><strong>Trigger → Action fundamentals</strong> — the core mental model behind every automation platform</li>
+          <li data-editable><strong>Zapier vs Make</strong> — two popular platforms, two different styles</li>
+          <li data-editable><strong>Wiring an AI step into a workflow</strong> — letting a model do the thinking mid-automation</li>
+          <li data-editable><strong>No-code vs code</strong> — deciding when a visual workflow is enough</li>
+        </ul>
+        <div class="ta-row" style="margin-top:auto;">
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">Trigger</span>
+              <h3 data-editable>New form submitted</h3>
+              <p data-editable>A customer fills out a contact form</p>
+            </div>
+          </div>
+          <div class="ta-connector">
+            <svg width="200" height="70" viewBox="0 0 200 70">
+              <defs>
+                <marker id="arrow1" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#FF6B35"></path>
+                </marker>
+              </defs>
+              <path d="M6 35 H176" stroke="#FF6B35" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#arrow1)" class="pulse-path"></path>
+            </svg>
+          </div>
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Action</span>
+              <h3 data-editable>AI drafts a reply, sent automatically</h3>
+              <p data-editable>This is literally what "automation" means today</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: CONCEPT - Trigger->Action fundamentals -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Trigger → Action: The Core Idea</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:26px;">Every no-code automation platform is built on one pattern: <strong>something happens (trigger)</strong>, so <strong>something else happens in response (action)</strong>. Everything else is vocabulary layered on top of that idea.</p>
+        <div class="card-grid">
+          <div class="node-card">
+            <div class="node-dot trigger"></div>
+            <span class="node-label">Trigger</span>
+            <h3 data-editable>The starting event</h3>
+            <p data-editable>A new row, a new email, a form submission, a scheduled time</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot action"></div>
+            <span class="node-label">Action</span>
+            <h3 data-editable>What happens next</h3>
+            <p data-editable>Send a message, create a record, call an API, update a sheet</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Zap / Scenario</span>
+            <h3 data-editable>The whole workflow</h3>
+            <p data-editable>The named automation that links one or more triggers to actions</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Connector / App</span>
+            <h3 data-editable>The service being linked</h3>
+            <p data-editable>Gmail, Slack, Google Sheets, OpenAI, your own API</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: CONCEPT - Zapier vs Make -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Zapier vs Make: Two Styles, Same Idea</h1>
+        <table class="compare" data-editable>
+          <tr><th>Aspect</th><th>Zapier</th><th>Make</th></tr>
+          <tr><td>Vocabulary</td><td>Zaps, apps, tasks</td><td>Scenarios, modules, operations</td></tr>
+          <tr><td>Interface</td><td>Linear, list-like step editor</td><td>Visual node-and-connector canvas</td></tr>
+          <tr><td>Branching</td><td>Paths &amp; Filters</td><td>Routers &amp; Filters</td></tr>
+          <tr><td>Pricing basis</td><td>Priced per task run</td><td>Priced per operation</td></tr>
+          <tr><td>Best for</td><td>Quick, point-to-point automations</td><td>Complex, highly branched, visual flows</td></tr>
+        </table>
+        <p class="slide-sub" data-editable style="margin-top:26px;">Both connect the same kinds of apps — the choice usually comes down to how visual and how branched your workflow needs to be.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: CONCEPT - Wiring an AI step -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Wiring an AI Step Into a Workflow</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:22px;">An AI step is unusual: it's an <strong>action</strong> (something runs), but its output also becomes <strong>data for every step after it</strong> — summaries, classifications, or drafts the rest of the workflow can use.</p>
+        <div class="ta-row" style="margin-top:14px;">
+          <div class="ta-node" style="width:380px;">
+            <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">Trigger</span><h3 data-editable>New support email arrives</h3></div>
+          </div>
+          <div class="ta-connector" style="width:130px;"><svg width="130" height="70" viewBox="0 0 130 70"><defs><marker id="a2" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#FFD166"></path></marker></defs><path d="M6 35 H106" stroke="#FFD166" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a2)" class="pulse-path"></path></svg></div>
+          <div class="ta-node" style="width:380px;">
+            <div class="node-card"><div class="node-dot info"></div><span class="node-label">AI Step</span><h3 data-editable>Classify urgency &amp; draft a reply</h3></div>
+          </div>
+          <div class="ta-connector" style="width:130px;"><svg width="130" height="70" viewBox="0 0 130 70"><defs><marker id="a3" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0EA5A0"></path></marker></defs><path d="M6 35 H106" stroke="#0EA5A0" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a3)" class="pulse-path"></path></svg></div>
+          <div class="ta-node" style="width:380px;">
+            <div class="node-card"><div class="node-dot action"></div><span class="node-label">Action</span><h3 data-editable>Create ticket, attach the draft</h3></div>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:34px;">The urgency label and drafted reply both flow forward — later steps route on urgency and use the draft directly.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: CONCEPT - Real example workflow -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>A Real Example, Step by Step</h1>
+        <div class="chain-row3">
+          <div class="chain3-node">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">Trigger</span>
+              <h3 data-editable>New Typeform response</h3>
+              <p data-editable>Fires when a customer submits a feedback form</p>
+            </div>
+            <div class="chain-caption" data-editable>Configure: which form, which fields to pass forward (name, message)</div>
+          </div>
+          <div class="chain3-connector"><svg width="80" height="60" viewBox="0 0 80 60"><defs><marker id="c1" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#1a1a1a"></path></marker></defs><path d="M4 30 H65" stroke="#1a1a1a" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#c1)" class="pulse-path"></path></svg></div>
+          <div class="chain3-node">
+            <div class="node-card">
+              <div class="node-dot info"></div>
+              <span class="node-label">AI Step</span>
+              <h3 data-editable>Draft a reply</h3>
+              <p data-editable>A prompt template fills in the customer's message</p>
+            </div>
+            <div class="chain-caption" data-editable>Configure: prompt template with the form fields as input variables</div>
+          </div>
+          <div class="chain3-connector"><svg width="80" height="60" viewBox="0 0 80 60"><defs><marker id="c2" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#1a1a1a"></path></marker></defs><path d="M4 30 H65" stroke="#1a1a1a" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#c2)" class="pulse-path"></path></svg></div>
+          <div class="chain3-node">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Action</span>
+              <h3 data-editable>Gmail: create a draft</h3>
+              <p data-editable>Saves as a draft, not sent — a human reviews first</p>
+            </div>
+            <div class="chain-caption" data-editable>Configure: recipient, subject, body = AI step's output</div>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:30px;">Notice the safety choice: <strong>create a draft</strong>, not <strong>send</strong> — a human stays in the loop before anything goes out.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: CONCEPT - No-code vs code decision -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>No-Code Is Enough — Until It Isn't</h1>
+        <div class="card-grid">
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Volume &amp; Speed</span>
+            <h3 data-editable>No-code: low-to-medium volume</h3>
+            <p data-editable>Need to handle millions of events cheaply and fast? Consider code</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Custom Logic</span>
+            <h3 data-editable>No-code: simple branching</h3>
+            <p data-editable>Deeply nested conditionals or math are easier and clearer in code</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Error Handling</span>
+            <h3 data-editable>No-code: basic retries</h3>
+            <p data-editable>Fine-grained retry/backoff logic usually needs a real script</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Data Sensitivity</span>
+            <h3 data-editable>No-code: check compliance first</h3>
+            <p data-editable>Regulated data may require in-house infrastructure, not a third-party platform</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Cost at Scale</span>
+            <h3 data-editable>No-code: per-task pricing adds up</h3>
+            <p data-editable>At high volume, a custom script can be far cheaper to run</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Rule of Thumb</span>
+            <h3 data-editable>Start no-code, graduate to code</h3>
+            <p data-editable>Prove the workflow works, then rebuild the bottleneck in code if needed</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Demo Walkthrough</div>
+        <h1 class="slide-title" data-editable>Simulating an Automation Step in Python</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:22px;">You don't need a live Zapier or Make account to understand the pattern. The notebook writes a tiny Python function that plays the role of an automation "action" — taking an LLM's output and doing something concrete with it.</p>
+        <div class="code-block" data-editable>
+<span class="c"># stands in for a Zapier/Make "action" step</span><br>
+<span class="k">def</span> action_append_to_csv(llm_output: <span class="m">dict</span>, path: <span class="s">"str"</span> = <span class="s">"leads.csv"</span>):<br>
+&nbsp;&nbsp;<span class="c"># the AI step already ran -- this is the very next node</span><br>
+&nbsp;&nbsp;<span class="k">with</span> open(path, <span class="s">"a"</span>) <span class="k">as</span> f:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;f.write(f<span class="s">"{llm_output['name']},{llm_output['summary']}\n"</span>)<br>
+&nbsp;&nbsp;<span class="k">return</span> {<span class="s">"status"</span>: <span class="s">"appended"</span>, <span class="s">"path"</span>: path}
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:22px;">The trigger (a new lead) and AI step (summarize the lead) happen before this — this function is purely the <strong>action</strong> node, made concrete in code.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: COMMON PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Common Pitfalls</div>
+        <h1 class="slide-title" data-editable>Where Automations Go Wrong</h1>
+        <ul class="bullet-list">
+          <li data-editable><strong>No error handling</strong> — a failed step fails silently unless you add explicit checks and alerts</li>
+          <li data-editable><strong>Trigger loops</strong> — an action that updates the same sheet/inbox it's watching can re-trigger itself endlessly</li>
+          <li data-editable><strong>Ignoring rate limits &amp; cost</strong> — an AI step run on every event can get expensive or throttled fast at scale</li>
+          <li data-editable><strong>Skipping a test run</strong> — always dry-run with sample data before turning a Zap/Scenario fully on</li>
+          <li data-editable><strong>Hardcoding secrets in visual steps</strong> — use the platform's connection/credential manager, not plain text fields</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Hands-On</div>
+        <h1 class="slide-title" data-editable>Challenge Preview</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:24px;">Full exercises and starter code live in <strong>class-3.ipynb</strong>. A preview of what you'll build:</p>
+        <div class="card-grid">
+          <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">01</span><h3 data-editable>Sketch a trigger → AI step → action diagram for a real task</h3></div>
+          <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">02</span><h3 data-editable>Write a Python "action" function with error handling</h3></div>
+          <div class="node-card"><div class="node-dot action"></div><span class="node-label">03</span><h3 data-editable>Simulate a 3-step automation end to end</h3></div>
+          <div class="node-card"><div class="node-dot action"></div><span class="node-label">04</span><h3 data-editable>Decide no-code vs code for a given scenario, and justify it</h3></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: RECAP -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Recap</div>
+        <h1 class="slide-title" data-editable>Key Takeaways</h1>
+        <ul class="bullet-list recap-list">
+          <li data-editable>Every automation is a <strong>trigger → action</strong> pattern, however many steps it has</li>
+          <li data-editable>Zapier and Make solve the same problem with different interfaces — linear list vs visual canvas</li>
+          <li data-editable>An AI step is special: it's an action <em>and</em> a data source for every step after it</li>
+          <li data-editable>No-code is enough until volume, custom logic, or compliance needs push you toward code</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: NEXT CLASS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Next Class</div>
+        <h1 class="slide-title" data-editable>Week 4: Prompt Engineering</h1>
+        <p class="slide-sub" data-editable style="max-width:1100px;">You've now built with no-code and low-code tools. Next week we go back to the raw material every one of these tools depends on — the prompt itself — and learn to write it with precision.</p>
+        <div class="ta-row" style="margin-top:auto;">
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">This Week</span>
+              <h3 data-editable>No-code &amp; low-code builders</h3>
+            </div>
+          </div>
+          <div class="ta-connector">
+            <svg width="200" height="70" viewBox="0 0 200 70"><defs><marker id="a4" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0EA5A0"></path></marker></defs><path d="M6 35 H176" stroke="#0EA5A0" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a4)" class="pulse-path"></path></svg>
+          </div>
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Next Week</span>
+              <h3 data-editable>Prompt engineering — the manuscript</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<div class="deck-controls">
+  <span>GenAI Foundations / Week 3 / Class 3</span>
+  <span class="sep">·</span>
+  <a href="../index.html">Course</a>
+  <span class="sep">·</span>
+  <a href="index.html">Week 3</a>
+  <span class="sep">·</span>
+  <span class="counter" id="slideCounter">01 / 12</span>
+</div>
+<a class="nav-btn nav-prev" href="class-2.html">← Class 2</a>
+<a class="nav-btn nav-next" href="../week-4/index.html">Week 4 →</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

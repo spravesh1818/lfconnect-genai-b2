@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 3: Capabilities, Limitations &amp; Responsible AI — Week 2</title>
+<meta name="description" content="Week 2, Class 3: hallucination, bias, failure modes, and responsible-use principles for LLMs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 2 THEME — "THE BLACK BOX / NEURAL SIGNAL"
+   =========================================== */
+:root{
+  --bg:#12071f;
+  --panel:#1d0f30;
+  --panel2:#26153f;
+  --magenta:#d946ef;
+  --cyan:#22d3ee;
+  --amber:#f5a524;
+  --text:#eee6fb;
+  --muted:#a98fc9;
+  --font-display:'Unbounded',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'Space Mono',monospace;
+  --stage-bg:var(--bg);
+  --slide-bg:var(--bg);
+}
+*{box-sizing:border-box;}
+.deck-stage{
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(ellipse 900px 600px at 85% -10%, rgba(217,70,239,.16) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 700px at -5% 110%, rgba(34,211,238,.14) 0%, transparent 60%),
+    var(--bg);
+}
+.deck-stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(238,230,251,.07) 1.5px, transparent 1.5px);
+  background-size:44px 44px;
+  opacity:.5;
+}
+.slide-inner{position:absolute;inset:0;padding:84px 128px 96px;display:flex;flex-direction:column;z-index:1;}
+.eyebrow{font-family:var(--font-mono);font-size:22px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin:0 0 18px;display:flex;align-items:center;gap:14px;}
+.eyebrow::before{content:'';width:34px;height:2px;background:var(--cyan);display:inline-block;}
+h1.slide-title, h2.slide-title{font-family:var(--font-display);font-weight:900;color:var(--text);margin:0 0 8px;letter-spacing:-.01em;}
+h1.slide-title{font-size:74px;line-height:1.05;}
+h2.slide-title{font-size:56px;line-height:1.12;}
+.subtitle{font-family:var(--font-body);font-size:26px;color:var(--muted);margin:0 0 36px;max-width:1300px;line-height:1.5;}
+.rule{width:100%;height:1px;background:linear-gradient(90deg, rgba(217,70,239,.5), rgba(34,211,238,.15), transparent);margin:0 0 36px;}
+
+ul.bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px;}
+ul.bullets li{font-size:26px;line-height:1.5;padding-left:40px;position:relative;color:var(--text);}
+ul.bullets li::before{content:'▹';color:var(--magenta);position:absolute;left:0;top:0;font-size:26px;}
+ul.bullets li b, ul.bullets li strong{color:var(--cyan);font-weight:600;}
+ul.bullets.tight li{font-size:22px;}
+
+.card-grid{display:grid;gap:26px;flex:1;align-content:start;}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.card{background:var(--panel);border:1px solid rgba(217,70,239,.28);border-radius:18px;padding:30px 32px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+.card.cy{border-color:rgba(34,211,238,.32);}
+.card h3{font-family:var(--font-display);font-weight:700;font-size:25px;color:var(--magenta);margin:0 0 12px;}
+.card.cy h3{color:var(--cyan);}
+.card p{font-size:19px;line-height:1.5;color:var(--text);margin:0;opacity:.92;}
+.card .num{font-family:var(--font-mono);font-size:15px;color:var(--muted);letter-spacing:.1em;margin-bottom:8px;display:block;}
+
+.pit-card{background:var(--panel);border-left:4px solid var(--magenta);border-radius:10px;padding:22px 26px;}
+.pit-card h3{font-family:var(--font-body);font-weight:600;font-size:21px;color:var(--text);margin:0 0 8px;display:flex;gap:12px;align-items:flex-start;}
+.pit-card h3::before{content:'✕';color:var(--magenta);font-family:var(--font-mono);}
+.pit-card p{font-size:18px;color:var(--muted);line-height:1.5;margin:0;padding-left:32px;}
+
+.code-box{background:#0a0416;border:1px solid rgba(34,211,238,.3);border-radius:14px;padding:26px 30px;font-family:var(--font-mono);font-size:20px;color:#c7f7ff;line-height:1.7;overflow:hidden;}
+.code-box .cm{color:var(--muted);}
+.code-box .kw{color:var(--magenta);}
+.code-box .st{color:var(--amber);}
+
+.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;flex:1;align-items:center;}
+.flex-fill{flex:1;display:flex;flex-direction:column;justify-content:center;}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:16px;letter-spacing:.1em;text-transform:uppercase;color:var(--bg);background:var(--cyan);padding:8px 16px;border-radius:6px;font-weight:700;}
+.tag.mg{background:var(--magenta);}
+.tag.am{background:var(--amber);}
+.center-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;gap:22px;}
+
+.title-slide-inner{display:flex;flex-direction:column;justify-content:center;height:100%;}
+.class-chip{font-family:var(--font-mono);font-size:20px;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
+.mega-title{font-family:var(--font-display);font-weight:900;font-size:84px;line-height:1.06;color:var(--text);margin:0 0 26px;max-width:1550px;}
+.mega-title .hl{color:var(--magenta);}
+.deck-sub{font-size:28px;color:var(--muted);max-width:1150px;line-height:1.55;margin:0 0 40px;}
+.theme-strap{font-family:var(--font-mono);font-size:18px;color:var(--muted);letter-spacing:.08em;}
+.theme-strap b{color:var(--cyan);}
+
+.recap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:24px;}
+.recap-list li{display:flex;gap:22px;align-items:flex-start;font-size:26px;line-height:1.5;}
+.recap-num{font-family:var(--font-display);font-weight:900;font-size:32px;color:var(--magenta);min-width:56px;}
+
+.next-card{background:var(--panel);border:1px solid rgba(34,211,238,.35);border-radius:22px;padding:52px 60px;max-width:1200px;margin:0 auto;text-align:center;}
+.next-card .tag{margin-bottom:20px;}
+.next-card h2{font-family:var(--font-display);font-weight:900;font-size:48px;color:var(--text);margin:0 0 18px;}
+.next-card p{font-size:24px;color:var(--muted);line-height:1.5;margin:0;}
+
+.deck-controls{display:flex;gap:18px;align-items:center;background:rgba(29,15,48,.85);border:1px solid rgba(217,70,239,.3);backdrop-filter:blur(6px);padding:10px 22px;border-radius:999px;font-family:var(--font-mono);font-size:14px;color:var(--muted);}
+.deck-controls .crumb{color:var(--cyan);}
+.deck-controls .sep{opacity:.4;}
+.deck-controls .counter{color:var(--text);font-weight:700;}
+.corner-links{position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:10px;font-family:var(--font-mono);font-size:13px;}
+.corner-links a{color:var(--muted);text-decoration:none;border:1px solid rgba(238,230,251,.25);padding:8px 14px;border-radius:8px;background:rgba(29,15,48,.7);transition:color .2s,border-color .2s;}
+.corner-links a:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn{position:fixed;bottom:20px;z-index:1000;font-family:var(--font-mono);font-size:14px;text-decoration:none;color:var(--muted);background:rgba(29,15,48,.75);border:1px solid rgba(34,211,238,.3);padding:12px 18px;border-radius:10px;transition:color .2s,border-color .2s;}
+.nav-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn.prev{left:20px;}
+.nav-btn.next{right:20px;}
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--cyan); outline-offset: 4px; }
+
+/* --- class-3 specific components --- */
+.hallu-box{background:#0a0416;border:1px solid rgba(217,70,239,.4);border-radius:14px;padding:26px 30px;font-family:var(--font-mono);font-size:19px;line-height:1.6;color:var(--text);}
+.hallu-box .flag{color:var(--magenta);font-weight:700;}
+.hallu-box .prompt-line{color:var(--muted);}
+.principle-strip{display:flex;align-items:center;gap:16px;background:var(--panel2);border-radius:12px;padding:18px 26px;margin-bottom:16px;}
+.principle-strip .ic{font-family:var(--font-mono);color:var(--cyan);font-weight:700;font-size:20px;min-width:34px;}
+.principle-strip p{margin:0;font-size:20px;color:var(--text);}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <section class="slide">
+      <div class="slide-inner title-slide-inner">
+        <div class="class-chip" data-editable>WEEK 2 · THE BLACK BOX / NEURAL SIGNAL · CLASS 3</div>
+        <h1 class="mega-title" data-editable>Capabilities, Limitations <span class="hl">&amp; Responsible AI</span></h1>
+        <p class="deck-sub" data-editable>An LLM is a fluent, confident text generator — not an oracle. This class covers what these models are genuinely good at, where they reliably fail, and how to use them responsibly.</p>
+        <div class="theme-strap">GenAI Foundations <span style="opacity:.5">/</span> Week 2: Introduction to LLMs <span style="opacity:.5">/</span> <b>Class 3</b></div>
+      </div>
+    </section>
+
+    <!-- 2: AGENDA -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Today's Map</div>
+        <h2 class="slide-title" data-editable>Strengths, Cracks, and Guardrails</h2>
+        <p class="subtitle" data-editable>We close Week 2 by turning a critical eye on the technology — where it shines, where it fails predictably, and what responsible use actually requires of you.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-3">
+          <div class="card"><span class="num">01</span><h3 data-editable>Genuine Strengths</h3><p data-editable>Tasks where LLMs reliably add value today.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Hallucination</h3><p data-editable>Why models sometimes state fiction with total confidence.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Bias</h3><p data-editable>How training data shapes unfair or skewed outputs.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Other Failure Modes</h3><p data-editable>Math errors, stale knowledge, and prompt injection.</p></div>
+          <div class="card"><span class="num">05</span><h3 data-editable>Responsible Use</h3><p data-editable>Practical principles for using LLMs in real work.</p></div>
+          <div class="card cy"><span class="num">06</span><h3 data-editable>Live Demo</h3><p data-editable>Deliberately triggering and inspecting a hallucination.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3: CONCEPT - strengths -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 01</div>
+        <h2 class="slide-title" data-editable>What LLMs Are Genuinely Good At</h2>
+        <p class="subtitle" data-editable>Before critiquing the failure modes, it's worth being precise about the real, repeatedly-verified strengths.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card cy"><h3 data-editable>Drafting &amp; Summarizing</h3><p data-editable>Turning rough notes into readable prose, or condensing long documents into key points.</p></div>
+          <div class="card"><h3 data-editable>Brainstorming &amp; Rewriting</h3><p data-editable>Generating options, alternate phrasings, or tones for a given piece of text.</p></div>
+          <div class="card cy"><h3 data-editable>Code Assistance</h3><p data-editable>Explaining, translating between languages, and drafting boilerplate or tests.</p></div>
+          <div class="card"><h3 data-editable>Translation &amp; Style Transfer</h3><p data-editable>Converting between languages or reading levels, given a source text to ground it.</p></div>
+        </div>
+        <ul class="bullets tight" style="margin-top:26px;">
+          <li data-editable>Notice the pattern: these tasks give the model something concrete to transform — not something to invent from scratch and verify unaided.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4: CONCEPT - hallucination -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 02</div>
+        <h2 class="slide-title" data-editable>Hallucination: Confident Nonsense</h2>
+        <p class="subtitle" data-editable>A <b style="color:var(--cyan)">hallucination</b> is fluent, plausible-sounding output that is factually wrong or entirely invented — stated with the same confidence as a correct answer.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>Because the model is optimized to produce plausible next tokens, not verified facts, a confident tone is never proof of accuracy.</li>
+            <li data-editable>Hallucinations are most common for obscure facts, exact numbers, quotes, and citations — anywhere plausible-sounding detail is easy to generate but hard to verify.</li>
+            <li data-editable>The model has no internal "I'm not sure" signal by default — it will complete a fabricated citation just as fluently as a real one.</li>
+          </ul>
+          <div class="hallu-box" data-editable>
+            <span class="prompt-line">prompt:</span> "Cite the 2019 study where Dr. A. Renwick proved goldfish have a 3-second memory."<br><br>
+            <span class="flag">model:</span> "In Renwick (2019), <i>Journal of Aquatic Cognition</i>, vol. 14, researchers found goldfish retain memories for only three seconds..."<br><br>
+            <span class="flag">reality:</span> No such study, journal, or author exists — the claim is a well-known myth, and the model fabricated a citation to match it.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: CONCEPT - why hallucination happens -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 02, continued</div>
+        <h2 class="slide-title" data-editable>Why Hallucination Happens</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable><b>No built-in fact-checker:</b> the model has no live database lookup by default — it generates the most plausible continuation, not the most verified one.</li>
+          <li data-editable><b>Pattern completion, not retrieval:</b> asked for a citation, it produces something citation-shaped, whether or not the source is real.</li>
+          <li data-editable><b>Training data cutoff:</b> the model's knowledge freezes at training time — anything after that, or rare enough to be underrepresented, is a gap it may paper over.</li>
+          <li data-editable><b>Pressure to answer:</b> models are tuned to be helpful and give an answer, which can bias them toward guessing rather than declining.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6: CONCEPT - bias -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 03</div>
+        <h2 class="slide-title" data-editable>Bias In, Bias Out</h2>
+        <p class="subtitle" data-editable>LLMs learn statistical patterns from real-world text — and real-world text carries the biases, stereotypes, and representation gaps of the societies that produced it.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card"><h3 data-editable>Stereotyped associations</h3><p data-editable>A model may default to gendered or culturally skewed assumptions in stories, job examples, or generated images unless prompted otherwise.</p></div>
+          <div class="card cy"><h3 data-editable>Representation gaps</h3><p data-editable>Languages, regions, and topics with less training data are handled less reliably — quality is not evenly distributed.</p></div>
+          <div class="card"><h3 data-editable>Amplification at scale</h3><p data-editable>A subtle bias repeated across millions of automated outputs can compound into a much larger real-world effect.</p></div>
+          <div class="card cy"><h3 data-editable>Mitigations exist, not cures</h3><p data-editable>Fine-tuning, filtering, and instructions can reduce visible bias, but rarely eliminate it — vigilance is still required.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7: CONCEPT - other failure modes -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 04</div>
+        <h2 class="slide-title" data-editable>Other Failure Modes to Expect</h2>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card"><h3 data-editable>Arithmetic &amp; logic slips</h3><p data-editable>Multi-step math or precise counting can go wrong even when the prose around it reads confidently.</p></div>
+          <div class="card cy"><h3 data-editable>Stale knowledge</h3><p data-editable>Anything after the training cutoff — recent events, new releases — may be missing, guessed, or wrong.</p></div>
+          <div class="card"><h3 data-editable>Prompt injection</h3><p data-editable>Untrusted text (a webpage, a document) can contain hidden instructions that hijack the model's behavior.</p></div>
+          <div class="card cy"><h3 data-editable>Run-to-run inconsistency</h3><p data-editable>The same prompt can yield different answers across calls, especially at higher temperature.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8: CONCEPT - responsible use -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 05</div>
+        <h2 class="slide-title" data-editable>Responsible Use, in Practice</h2>
+        <p class="subtitle" data-editable>None of these limitations mean "don't use LLMs" — they mean use them with the right safeguards.</p>
+        <div class="rule"></div>
+        <div class="principle-strip"><span class="ic">01</span><p data-editable><b>Verify important facts</b> — especially numbers, quotes, citations, and anything with real-world consequences.</p></div>
+        <div class="principle-strip"><span class="ic">02</span><p data-editable><b>Keep a human in the loop</b> for consequential decisions — hiring, medical, legal, or financial output should be reviewed, not shipped blind.</p></div>
+        <div class="principle-strip"><span class="ic">03</span><p data-editable><b>Disclose AI involvement</b> where it matters to your audience or organization's policy.</p></div>
+        <div class="principle-strip"><span class="ic">04</span><p data-editable><b>Protect sensitive data</b> — don't paste confidential or personal information into prompts without checking data-handling policies.</p></div>
+        <div class="principle-strip"><span class="ic">05</span><p data-editable><b>Watch for skewed outputs</b> and adjust prompts, review criteria, or tooling when you spot a pattern of bias.</p></div>
+      </div>
+    </section>
+
+    <!-- 9: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Demo Walkthrough → notebook</div>
+        <h2 class="slide-title" data-editable>Triggering a Hallucination, on Purpose</h2>
+        <p class="subtitle" data-editable>class-3.ipynb prompts a real LLM for a plausible-but-fake fact, then discusses why it happened and how you'd catch it.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <div class="code-box" data-editable>
+<span class="cm"># ask for something that sounds real but likely isn't</span><br>
+prompt = (<br>
+&nbsp;&nbsp;<span class="st">"What did Marie Curie say about "</span><br>
+&nbsp;&nbsp;<span class="st">"large language models in her 1922 lecture?"</span><br>
+)<br>
+response = client.messages.create(...)<br>
+<span class="cm"># Marie Curie died in 1934, decades before computers</span><br>
+<span class="cm"># existed — any confident-sounding quote is fabricated.</span>
+          </div>
+          <ul class="bullets">
+            <li data-editable>The prompt embeds a false premise — LLMs did not exist in 1922 — to see if the model challenges it or plays along.</li>
+            <li data-editable>The notebook discusses the actual response critically: does it hedge, invent a quote, or correct the premise?</li>
+            <li data-editable>This is a template you can reuse to probe any model for hallucination before trusting it on a real task.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Common Pitfalls</div>
+        <h2 class="slide-title" data-editable>Misconceptions That Get People Burned</h2>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="pit-card"><h3 data-editable>"If it sounds confident, it's correct"</h3><p data-editable>Fluency and accuracy are produced by different mechanisms — confidence of tone tells you nothing about truth.</p></div>
+          <div class="pit-card"><h3 data-editable>"AI output is neutral and objective"</h3><p data-editable>Every model reflects choices in training data and tuning — there is no bias-free default.</p></div>
+          <div class="pit-card"><h3 data-editable>"One better prompt fixes bias"</h3><p data-editable>Prompting can reduce visible bias in a single response, but doesn't remove it from the underlying model.</p></div>
+          <div class="pit-card"><h3 data-editable>"It will tell me when it doesn't know"</h3><p data-editable>Models often guess fluently instead of declining — don't rely on self-reported uncertainty.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Hands-On Preview</div>
+        <h2 class="slide-title" data-editable>In the Notebook: Stress-Test a Model</h2>
+        <p class="subtitle" data-editable>class-3.ipynb closes with five challenges. A preview:</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card"><span class="num">01</span><h3 data-editable>Design a trap prompt</h3><p data-editable>Write your own false-premise question to probe for hallucination.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Spot a bias pattern</h3><p data-editable>Generate several short stories and compare recurring assumptions.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Break the math</h3><p data-editable>Find a multi-step arithmetic prompt the model gets wrong.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Write a use policy</h3><p data-editable>Draft three responsible-use rules for a hypothetical team adopting LLMs.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12: RECAP -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <div class="rule"></div>
+        <ul class="recap-list">
+          <li><span class="recap-num">01</span><span data-editable>LLMs excel at transforming existing text — drafting, summarizing, rewriting, and code assistance.</span></li>
+          <li><span class="recap-num">02</span><span data-editable>Hallucination happens because models generate plausible text, not verified facts — confidence is not accuracy.</span></li>
+          <li><span class="recap-num">03</span><span data-editable>Bias, stale knowledge, and inconsistency are structural properties of how these models are trained, not occasional bugs.</span></li>
+          <li><span class="recap-num">04</span><span data-editable>Responsible use means verification, human review, disclosure, and data protection — every time it matters.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 13: NEXT CLASS -->
+    <section class="slide">
+      <div class="slide-inner center-col">
+        <div class="tag mg">Next Up: Week 3</div>
+        <div class="next-card">
+          <h2 data-editable>No-Code &amp; Low-Code AI Builders</h2>
+          <p data-editable>With the fundamentals of how LLMs work and where they fail in hand, Week 3 turns to using ChatGPT, Claude, Custom GPTs, and automation tools like Zapier and Make to build without writing a full application.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="corner-links">
+  <a href="../index.html">Course</a>
+  <a href="index.html">Week 2</a>
+</div>
+<a class="nav-btn prev" href="class-2.html">← Class 2: Tokens &amp; Temperature</a>
+<a class="nav-btn next" href="../week-3/index.html">Week 3: No-Code Builders →</a>
+
+<div class="deck-controls">
+  <span class="crumb">GenAI Foundations / Week 2 / Class 3</span>
+  <span class="sep">·</span>
+  <span class="counter" id="slideCounter">01 / 13</span>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

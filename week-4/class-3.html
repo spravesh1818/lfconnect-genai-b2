@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 3 — Structured Output & Prompt Debugging | Week 4</title>
+<meta name="description" content="Week 4, Class 3: JSON/schema-constrained output, iterating on failing prompts, and common failure patterns.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 4 THEME — THE MANUSCRIPT / RED PEN
+   =========================================== */
+*{ box-sizing:border-box; }
+:root{
+  --bg:#F6F1E7;
+  --paper:#FCF9F1;
+  --ink:#241F1C;
+  --red:#B3261E;
+  --gold:#C9A227;
+  --gold-ink:#7A5E12;
+  --rule: rgba(36,31,28,.16);
+  --stage-bg:#1C1712;
+  --slide-bg:#F6F1E7;
+  --font-display:'Fraunces', serif;
+  --font-body:'Karla', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+  --font-hand:'Caveat', cursive;
+}
+body{ font-family:var(--font-body); }
+
+.slide{ background-color:var(--slide-bg); background-image:repeating-linear-gradient(to bottom, transparent 0 63px, var(--rule) 63px 64px); }
+.slide::before{ content:""; position:absolute; left:168px; top:0; bottom:0; width:2px; background:rgba(179,38,30,.28); pointer-events:none; z-index:0; }
+.slide::after{ content:""; position:absolute; top:0; right:0; width:0; height:0; border-style:solid; border-width:0 56px 56px 0; border-color:transparent rgba(36,31,28,.09) transparent transparent; pointer-events:none; z-index:0; }
+.stage-footer{ position:absolute; right:60px; bottom:34px; font-family:var(--font-mono); font-size:14px; color:var(--ink); opacity:.4; letter-spacing:.06em; z-index:6; pointer-events:none; }
+
+.slide-inner{ position:relative; z-index:2; height:100%; padding:86px 130px 90px 228px; display:flex; flex-direction:column; }
+.slide-inner.centered{ justify-content:center; }
+
+.kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--red); font-weight:500; margin:0 0 20px; }
+.slide-head{ font-family:var(--font-display); font-weight:600; font-size:56px; color:var(--ink); margin:0 0 14px; line-height:1.08; }
+.gold-rule{ width:120px; height:4px; background:var(--gold); margin:0 0 38px; border-radius:2px; }
+.lede{ font-family:var(--font-body); font-size:25px; color:var(--ink); opacity:.82; max-width:1340px; line-height:1.5; margin:0 0 34px; }
+
+h1.title-hero{ font-family:var(--font-display); font-weight:900; font-size:96px; color:var(--ink); margin:0 0 26px; line-height:1.06; max-width:1580px; }
+.subtitle-lead{ font-family:var(--font-display); font-weight:600; font-size:32px; color:var(--ink); opacity:.85; max-width:1220px; line-height:1.45; margin:0 0 40px; }
+.title-byline{ font-family:var(--font-mono); font-size:18px; color:var(--red); letter-spacing:.08em; margin-top:auto; }
+.pencil{ color:var(--red); }
+
+ul.bullet-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px; max-width:1560px; }
+ul.bullet-list li{ position:relative; padding-left:42px; font-size:27px; line-height:1.42; color:var(--ink); }
+ul.bullet-list li::before{ content:"—"; position:absolute; left:0; color:var(--red); font-weight:700; font-family:var(--font-mono); }
+ul.bullet-list.tight li{ font-size:23px; }
+
+ul.step-list{ list-style:none; margin:0; padding:0; counter-reset:step; display:flex; flex-direction:column; gap:16px; max-width:1620px; }
+ul.step-list li{ position:relative; padding-left:56px; font-size:22px; line-height:1.38; color:var(--ink); counter-increment:step; }
+ul.step-list li::before{ content:counter(step); position:absolute; left:0; top:-2px; width:36px; height:36px; border:2px solid var(--red); color:var(--red); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:18px; font-weight:600; }
+
+.card-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+.card-grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.card{ background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:22px 22px 20px; box-shadow:0 2px 0 rgba(36,31,28,.06); }
+.card h3{ font-family:var(--font-display); font-weight:600; font-size:21px; margin:0 0 8px; color:var(--ink); }
+.card h3 .num{ color:var(--red); font-family:var(--font-mono); font-size:16px; margin-right:6px; }
+.card p{ font-family:var(--font-body); font-size:16.5px; line-height:1.44; color:var(--ink); opacity:.82; margin:0; }
+
+.draft{ display:flex; flex-direction:column; gap:18px; max-width:1600px; }
+.draft-line{ display:flex; align-items:flex-start; gap:18px; }
+.draft-tag{ font-family:var(--font-mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; padding:6px 12px; border-radius:3px; white-space:nowrap; margin-top:6px; flex-shrink:0; }
+.draft-tag.weak{ background:rgba(179,38,30,.1); color:var(--red); border:1px solid rgba(179,38,30,.4); }
+.draft-tag.strong{ background:rgba(201,162,39,.15); color:var(--gold-ink); border:1px solid rgba(201,162,39,.5); }
+.draft-text{ font-family:var(--font-mono); font-size:20px; line-height:1.48; padding:16px 20px; border-radius:4px; flex:1; }
+.draft-text.weak{ background:rgba(179,38,30,.05); color:var(--red); text-decoration:line-through; text-decoration-thickness:2px; text-decoration-color:var(--red); }
+.draft-text.strong{ background:var(--paper); color:var(--ink); border-left:4px solid var(--gold); }
+
+.circled{ display:inline-block; border:3px solid var(--red); border-radius:52% 48% 51% 49% / 48% 52% 46% 54%; padding:2px 16px 6px; transform:rotate(-2deg); }
+.scribble{ font-family:var(--font-hand); font-weight:600; font-size:26px; color:var(--red); transform:rotate(-4deg); display:inline-block; margin-left:12px; }
+
+.script{ display:flex; flex-direction:column; gap:24px; max-width:1620px; }
+.turn-label{ font-family:var(--font-mono); font-size:16px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px; }
+.turn-label.system{ color:var(--red); }
+.turn-label.user{ color:var(--ink); }
+.turn-label.assistant{ color:var(--gold-ink); }
+.turn-text{ font-family:var(--font-mono); font-size:20px; line-height:1.48; color:var(--ink); }
+
+.toc{ display:flex; flex-direction:column; max-width:1660px; }
+.toc-item{ display:flex; align-items:baseline; gap:20px; padding:19px 0; border-bottom:1px dashed var(--rule); }
+.toc-num{ font-family:var(--font-mono); color:var(--red); font-size:22px; width:46px; flex-shrink:0; }
+.toc-title{ font-family:var(--font-display); font-weight:600; font-size:27px; flex-shrink:0; min-width:460px; color:var(--ink); }
+.toc-desc{ font-family:var(--font-body); font-size:19px; opacity:.75; flex:1; color:var(--ink); }
+
+table.version-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:18px; max-width:1660px; }
+table.version-table th, table.version-table td{ text-align:left; padding:14px 16px; border-bottom:1px solid var(--rule); vertical-align:top; }
+table.version-table th{ font-family:var(--font-mono); font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--red); border-bottom:2px solid var(--gold); }
+table.version-table td.mono{ font-family:var(--font-mono); font-size:16px; }
+table.version-table td.v{ font-family:var(--font-mono); color:var(--red); font-weight:600; }
+
+.pitfall-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+.pitfall{ display:flex; gap:16px; align-items:flex-start; background:var(--paper); border:1px solid var(--rule); border-radius:6px; padding:19px 21px; }
+.pitfall .mark{ font-family:var(--font-mono); font-size:22px; color:var(--red); font-weight:700; flex-shrink:0; line-height:1.3; }
+.pitfall p{ margin:0; font-size:17px; line-height:1.4; color:var(--ink); opacity:.85; }
+.pitfall strong{ display:block; font-family:var(--font-display); font-weight:600; font-size:19px; margin-bottom:4px; opacity:1; color:var(--ink); }
+
+.next-teaser{ display:flex; flex-direction:column; justify-content:center; height:100%; }
+.next-kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-ink); margin-bottom:22px; }
+
+/* ===== chrome outside the 16:9 stage ===== */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(36,31,28,.55); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--red); outline-offset: 4px; }
+
+.chrome-top{ position:fixed; top:18px; right:24px; z-index:1000; display:flex; gap:10px; align-items:center; font-family:var(--font-mono); font-size:13px; }
+.chrome-link{ color:var(--bg); background:rgba(36,31,28,.65); border:1px solid rgba(246,241,231,.25); padding:7px 14px; border-radius:3px; text-decoration:none; letter-spacing:.03em; }
+.chrome-link:hover{ border-color:var(--red); color:#fff; background:var(--red); }
+.breadcrumb{ position:fixed; top:20px; left:112px; z-index:1000; font-family:var(--font-mono); font-size:13px; letter-spacing:.03em; color:var(--bg); opacity:.8; background:rgba(36,31,28,.55); padding:7px 14px; border-radius:3px; }
+
+.counter{ font-family:var(--font-mono); font-size:14px; letter-spacing:.1em; color:var(--bg); background:rgba(36,31,28,.65); padding:8px 16px; border-radius:20px; border:1px solid rgba(246,241,231,.2); }
+
+.nav-btn{ position:fixed; bottom:22px; z-index:1000; font-family:var(--font-mono); font-size:14px; letter-spacing:.04em; color:var(--bg); background:rgba(36,31,28,.65); padding:9px 18px; border-radius:20px; text-decoration:none; border:1px solid rgba(246,241,231,.2); transition:background .2s ease, color .2s ease; }
+.nav-btn:hover{ background:var(--red); color:#fff; }
+.nav-btn.prev{ left:24px; }
+.nav-btn.next{ right:24px; }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <div class="slide">
+      <div class="slide-inner centered">
+        <div class="kicker" data-editable>GenAI Foundations · Week 4 · Class 3</div>
+        <h1 class="title-hero" data-editable>Structured Output <span class="pencil">&amp;</span> Prompt Debugging</h1>
+        <p class="subtitle-lead" data-editable>The most useful prompt isn't the most eloquent one — it's the one your code can parse every single time.</p>
+        <div class="title-byline" data-editable>THE MANUSCRIPT — WEEK 4 · CLASS 3 OF 3</div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 2: AGENDA -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Today's Draft</div>
+        <h2 class="slide-head" data-editable>What We're Revising Today</h2>
+        <div class="gold-rule"></div>
+        <div class="toc">
+          <div class="toc-item"><span class="toc-num">01</span><span class="toc-title" data-editable>Why Structured Output</span><span class="toc-desc" data-editable>Free text vs. machine-readable answers.</span></div>
+          <div class="toc-item"><span class="toc-num">02</span><span class="toc-title" data-editable>Requesting JSON</span><span class="toc-desc" data-editable>Prompting patterns that reliably produce valid JSON.</span></div>
+          <div class="toc-item"><span class="toc-num">03</span><span class="toc-title" data-editable>Schema-Constrained Output</span><span class="toc-desc" data-editable>Letting the API enforce the shape for you.</span></div>
+          <div class="toc-item"><span class="toc-num">04</span><span class="toc-title" data-editable>Validating What You Get Back</span><span class="toc-desc" data-editable>json.loads, try/except, and retry loops.</span></div>
+          <div class="toc-item"><span class="toc-num">05</span><span class="toc-title" data-editable>Debugging a Failing Prompt</span><span class="toc-desc" data-editable>A repeatable process for fixing broken output.</span></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 3: CONCEPT — WHY STRUCTURED OUTPUT -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Free Text Doesn't Scale</h2>
+        <div class="gold-rule"></div>
+        <p class="lede" data-editable>The moment a prompt's output feeds into more code — a database, a UI, another API call — free-form prose becomes a liability.</p>
+        <ul class="bullet-list">
+          <li data-editable>Structured output (JSON, CSV, XML) can be parsed deterministically; prose has to be re-interpreted every time.</li>
+          <li data-editable>Downstream systems need consistent field names and types — not "sometimes a list, sometimes a paragraph."</li>
+          <li data-editable>Structured output is what makes chaining prompts, function calling, and agent tool use possible.</li>
+          <li data-editable>It's still a prompting problem first — you must specify the exact shape you want.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 4: CONCEPT — REQUESTING JSON (draft motif) -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Ask for Exactly What You Want</h2>
+        <div class="gold-rule"></div>
+        <div class="draft">
+          <div class="draft-line">
+            <span class="draft-tag weak">Weak draft</span>
+            <span class="draft-text weak" data-editable>Give me the product details as <span class="circled">JSON</span>.<span class="scribble">↖ which fields? which types?</span></span>
+          </div>
+          <div class="draft-line">
+            <span class="draft-tag strong">Revision</span>
+            <span class="draft-text strong" data-editable>Return ONLY valid JSON, no other text, matching exactly this shape: {"name": string, "price_usd": number, "in_stock": boolean}.</span>
+          </div>
+        </div>
+        <ul class="bullet-list tight" style="margin-top:30px;">
+          <li data-editable>Show the exact keys, types, and an example — don't just say "as JSON."</li>
+          <li data-editable>Say "return ONLY JSON, no explanation, no markdown code fences" to stop extra prose.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 5: CONCEPT — SCHEMA-CONSTRAINED OUTPUT -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Letting the API Enforce the Shape</h2>
+        <div class="gold-rule"></div>
+        <p class="lede" data-editable>Modern LLM APIs offer structured-output modes — like JSON mode or a strict JSON schema — so the model's raw output is guaranteed parseable.</p>
+        <ul class="bullet-list">
+          <li data-editable>OpenAI: <code>response_format={"type": "json_schema", ...}</code> constrains output to your schema at the token level.</li>
+          <li data-editable>Anthropic: describing the schema in the system prompt plus a tool/function definition achieves the same reliability.</li>
+          <li data-editable>Schema constraints reduce, but don't eliminate, the need for validation — types can still be logically wrong (a price of −5).</li>
+          <li data-editable>Prefer schema mode over "please output JSON" whenever the API supports it — it's more reliable, not just more polite.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 6: CONCEPT — VALIDATING OUTPUT -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Trust, But Verify</h2>
+        <div class="gold-rule"></div>
+        <p class="lede" data-editable>Never pass model output straight into production code — validate it first, the same way you'd validate user input.</p>
+        <ul class="bullet-list">
+          <li data-editable>Wrap <code>json.loads()</code> in a try/except — catch malformed JSON before it crashes your pipeline.</li>
+          <li data-editable>Check required keys are present and types match what you expect, or use a schema library like <code>pydantic</code>.</li>
+          <li data-editable>On failure, retry with a corrective follow-up: "Your last response wasn't valid JSON. Return ONLY the corrected JSON."</li>
+          <li data-editable>Log failures — patterns in what breaks tell you what to fix in the prompt, not just the code.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 7: CONCEPT — DEBUGGING PROCESS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>A Process for Fixing a Broken Prompt</h2>
+        <div class="gold-rule"></div>
+        <ul class="step-list">
+          <li data-editable>Isolate — strip the prompt to its smallest form that still fails; remove unrelated instructions.</li>
+          <li data-editable>Reproduce — run it multiple times; is it consistent or intermittent (temperature-sensitive)?</li>
+          <li data-editable>Compare — change exactly one variable (wording, example, temperature) between attempts.</li>
+          <li data-editable>Localize — is it a formatting bug, a factual bug, or a misunderstanding of the task?</li>
+          <li data-editable>Patch — add the missing constraint, example, or delimiter: the smallest fix that addresses the cause.</li>
+          <li data-editable>Re-test — confirm the fix on several inputs, not just the one that first failed.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 8: FAILURE PATTERNS CARDS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-head" data-editable>Failure Patterns You'll See Constantly</h2>
+        <div class="gold-rule"></div>
+        <div class="card-grid">
+          <div class="card"><h3><span class="num">01</span>Extra Prose</h3><p data-editable>"Sure, here's the JSON:" before the object. Fix: say "output ONLY JSON, nothing else."</p></div>
+          <div class="card"><h3><span class="num">02</span>Markdown Fences</h3><p data-editable>Output wrapped in ```json ... ```. Fix: forbid markdown, or strip fences in code before parsing.</p></div>
+          <div class="card"><h3><span class="num">03</span>Truncated Output</h3><p data-editable>JSON cut off mid-object. Fix: raise the max token limit, or ask for a shorter, paginated result.</p></div>
+          <div class="card"><h3><span class="num">04</span>Wrong Fields/Types</h3><p data-editable>"Price" instead of "price", a string instead of a number. Fix: show an example with exact keys and types filled in.</p></div>
+          <div class="card"><h3><span class="num">05</span>Hallucinated Fields</h3><p data-editable>The model invents extra keys. Fix: say "do not include any keys other than those listed."</p></div>
+          <div class="card"><h3><span class="num">06</span>Inconsistent Shape</h3><p data-editable>An array sometimes, an object other times. Fix: pin the top-level shape with an example, or use schema mode.</p></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 9: DEMO WALKTHROUGH -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Workshop</div>
+        <h2 class="slide-head" data-editable>From Failing to Reliable</h2>
+        <div class="gold-rule"></div>
+        <table class="version-table">
+          <tr><th>Attempt</th><th>Prompt</th><th>Result</th></tr>
+          <tr><td class="v">1</td><td class="mono" data-editable>"Give me the top 3 skills from this resume as JSON."</td><td data-editable>Prose before the JSON — breaks json.loads.</td></tr>
+          <tr><td class="v">2</td><td class="mono" data-editable>"...Return ONLY JSON: {'skills': [string, string, string]}"</td><td data-editable>Valid JSON, but sometimes 2 or 4 skills.</td></tr>
+          <tr><td class="v">3</td><td class="mono" data-editable>"...exactly 3 skills" + JSON schema enforced via response_format</td><td data-editable>Valid JSON, exactly 3 items, every single run.</td></tr>
+        </table>
+        <p class="lede" style="margin-top:26px;" data-editable>Reproduce this exact progression against a real model in <strong>class-3.ipynb</strong>.</p>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 10: PITFALLS — DEBUGGING ANTI-PATTERNS -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Watch For This</div>
+        <h2 class="slide-head" data-editable>Debugging Anti-Patterns</h2>
+        <div class="gold-rule"></div>
+        <div class="pitfall-grid">
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Changing Everything at Once</strong><span data-editable>You can't tell which change fixed — or broke — it.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Testing Once</strong><span data-editable>One lucky run doesn't prove reliability; temperature makes output non-deterministic.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Ignoring Temperature</strong><span data-editable>High temperature on a structured-output task invites inconsistency — lower it.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Fixing the Code, Not the Prompt</strong><span data-editable>A fragile regex "fix" just moves the bug downstream.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>No Fallback</strong><span data-editable>Shipping without a retry-on-failure path guarantees production breakage eventually.</span></p></div>
+          <div class="pitfall"><span class="mark">✕</span><p><strong data-editable>Skipping Edge Cases</strong><span data-editable>Only testing the happy path — never the empty, huge, or malformed input.</span></p></div>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 11: CHALLENGE PREVIEW -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Hands-On in class-3.ipynb</div>
+        <h2 class="slide-head" data-editable>Your Turn: The Workshop</h2>
+        <div class="gold-rule"></div>
+        <ul class="step-list">
+          <li data-editable>Fix the Fence — take a prompt that returns markdown-wrapped JSON and fix it.</li>
+          <li data-editable>Validate &amp; Retry — write a validation loop that retries once with a corrective prompt on failure.</li>
+          <li data-editable>Enforce a Schema — use response_format / JSON schema mode to constrain a multi-field output.</li>
+          <li data-editable>Diagnose a Bug — apply the 6-step debugging process to a failing prompt and document the fix.</li>
+          <li data-editable>Break It on Purpose — write a prompt you predict will fail, run it, and explain why it did.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 12: RECAP -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Recap</div>
+        <h2 class="slide-head" data-editable>What We Revised</h2>
+        <div class="gold-rule"></div>
+        <ul class="bullet-list">
+          <li data-editable>Structured output turns prose into something code can trust — and it starts with a precise prompt.</li>
+          <li data-editable>Always specify exact keys, types, and "JSON only" — then validate what comes back.</li>
+          <li data-editable>Prefer schema-constrained modes over "please output JSON" when your API supports them.</li>
+          <li data-editable>Debugging is a process: isolate, reproduce, compare one variable at a time, patch, re-test.</li>
+          <li data-editable>Most failures repeat a small set of patterns — extra prose, wrong keys, truncation, hallucinated fields.</li>
+        </ul>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+    <!-- 13: NEXT CLASS / WEEK -->
+    <div class="slide">
+      <div class="slide-inner">
+        <div class="next-teaser">
+          <div class="next-kicker" data-editable>Next Week</div>
+          <h2 class="slide-head" data-editable>Introduction to AI Agents</h2>
+          <div class="gold-rule"></div>
+          <p class="lede" data-editable>Week 5 — "The Blueprint." We'll move from single prompts to agents that plan, act, and observe in a loop, starting with: What Makes an Agent an Agent?</p>
+        </div>
+      </div>
+      <div class="stage-footer">MANUSCRIPT — WEEK 4 · CLASS 3</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+<div class="chrome-top">
+  <a class="chrome-link" href="../index.html">Course</a>
+  <a class="chrome-link" href="index.html">Week 4</a>
+</div>
+<div class="breadcrumb">GenAI Foundations / Week 4 / Class 3</div>
+<div class="deck-controls"><div class="counter" id="slideCounter">01 / 13</div></div>
+<a class="nav-btn prev" href="class-2.html">← Prev</a>
+<a class="nav-btn next" href="../week-5/index.html">Next Week →</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+</script>
+<script>
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

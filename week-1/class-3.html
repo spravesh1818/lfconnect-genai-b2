@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 3 — Calling APIs &amp; Your First AI Script</title>
+<meta name="description" content="Week 1, Class 3: HTTP/requests basics, calling an LLM API, environment variables/secrets, an end-to-end script.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 1 THEME: "THE INTERPRETER"
+   =========================================== */
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#0d1117; --line:#21262d;
+  --blue:#4B8BBE; --yellow:#FFD43B; --mint:#7ee787; --text:#c9d1d9; --muted:#6e7681;
+  --stage-bg:#0d1117; --slide-bg:#0d1117;
+  --font-display:'JetBrains Mono', monospace; --font-body:'IBM Plex Sans', sans-serif; --font-code:'JetBrains Mono', monospace;
+}
+*{ box-sizing:border-box; }
+.deck-stage, .deck-stage *{ font-family:var(--font-body); }
+[data-editable]{ cursor:text; }
+
+.stage-chrome{ position:absolute; inset:0; z-index:5; pointer-events:none; }
+.tabbar{ position:absolute; left:0; top:0; width:1920px; height:58px; background:#0a0d12; border-bottom:1px solid var(--line); display:flex; align-items:flex-end; padding-left:96px; }
+.traffic{ position:absolute; left:22px; top:21px; display:flex; gap:8px; }
+.traffic span{ width:12px; height:12px; border-radius:50%; display:inline-block; }
+.traffic span:nth-child(1){ background:#ff5f56; }
+.traffic span:nth-child(2){ background:#ffbd2e; }
+.traffic span:nth-child(3){ background:#27c93f; }
+.tab{ font-family:var(--font-code); font-size:15px; color:var(--muted); padding:10px 22px; border-right:1px solid var(--line); background:#0d1117; height:44px; display:flex; align-items:center; gap:8px; }
+.tab.active{ color:var(--yellow); background:var(--bg); border-top:2px solid var(--yellow); height:42px; }
+.tab .dot{ width:7px; height:7px; border-radius:50%; background:var(--blue); }
+.gutter{ position:absolute; left:0; top:58px; width:64px; height:1022px; background:#0a0d12; border-right:1px solid var(--line); font-family:var(--font-code); font-size:13px; line-height:26px; color:#2b3138; text-align:right; padding:18px 12px 0 0; overflow:hidden; }
+
+.slide-inner{ position:absolute; left:64px; top:58px; right:0; bottom:0; padding:58px 96px 58px 84px; }
+.slide-inner > *{ position:relative; z-index:1; }
+.docmark{ position:absolute; z-index:0; top:-30px; right:56px; font-family:var(--font-display); font-weight:800; font-size:220px; color:var(--blue); opacity:.07; line-height:1; pointer-events:none; }
+
+.kicker{ font-family:var(--font-code); font-size:22px; font-weight:700; letter-spacing:.06em; color:var(--mint); margin-bottom:18px; }
+h1.slide-title{ font-family:var(--font-display); font-weight:800; font-size:64px; color:var(--text); line-height:1.15; margin:0 0 28px; max-width:1500px; }
+h2.slide-title{ font-family:var(--font-display); font-weight:800; font-size:48px; color:var(--text); line-height:1.2; margin:0 0 30px; }
+.slide-title .accent{ color:var(--yellow); }
+.subtitle{ font-size:26px; color:var(--muted); max-width:1180px; line-height:1.55; margin-bottom:8px; }
+
+.blink{ display:inline-block; color:var(--mint); animation:blink 1.1s steps(1) infinite; }
+@keyframes blink{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
+
+ul.reading-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:18px; max-width:1520px; }
+ul.reading-list li{ display:flex; gap:18px; align-items:flex-start; font-size:25px; line-height:1.42; color:var(--text); }
+ul.reading-list li::before{ content:'»'; color:var(--mint); font-family:var(--font-code); font-weight:700; font-size:24px; flex:0 0 auto; }
+ul.reading-list li b, ul.reading-list li code{ color:var(--yellow); }
+ul.reading-list li code{ font-family:var(--font-code); font-size:21px; background:rgba(255,212,59,.08); padding:1px 8px; border-radius:5px; }
+
+.card-grid{ display:grid; gap:22px; max-width:1740px; }
+.card-grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+.card-grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px; display:flex; flex-direction:column; gap:8px; }
+.card h3{ font-family:var(--font-code); font-size:22px; color:var(--yellow); margin:0; }
+.card .ex{ font-family:var(--font-code); font-size:18px; color:var(--mint); background:#0a0d12; border-radius:6px; padding:6px 10px; }
+.card p{ font-size:17px; color:var(--muted); margin:0; line-height:1.4; }
+
+.code-block{ background:#010409; border:1px solid var(--line); border-left:3px solid var(--blue); border-radius:10px; padding:24px 28px; font-family:var(--font-code); font-size:20px; line-height:1.56; color:var(--text); white-space:pre; max-width:1560px; }
+.code-block .kw{ color:var(--blue); font-weight:700; }
+.code-block .st{ color:var(--mint); }
+.code-block .cm{ color:var(--muted); font-style:italic; }
+.code-block .nm{ color:var(--yellow); }
+.code-block .fn{ color:#e3b341; }
+
+.terminal-block{ background:#010409; border:1px solid var(--line); border-left:3px solid var(--mint); border-radius:10px; padding:20px 28px; font-family:var(--font-code); font-size:19px; line-height:1.5; color:var(--mint); max-width:1560px; }
+.terminal-block .prompt{ color:var(--muted); }
+
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:32px; max-width:1740px; }
+
+.agenda-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:22px; max-width:1560px; }
+.agenda-list li{ display:flex; gap:26px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px 28px; }
+.agenda-list .num{ font-family:var(--font-display); font-weight:800; font-size:34px; color:var(--blue); width:56px; flex:0 0 auto; }
+.agenda-list .txt{ font-size:26px; color:var(--text); line-height:1.4; }
+.agenda-list .txt b{ color:var(--yellow); }
+
+.pitfall-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:20px; max-width:1740px; }
+.pitfall{ background:var(--panel); border:1px solid var(--line); border-left:3px solid #f0883e; border-radius:10px; padding:18px 24px; }
+.pitfall h3{ font-family:var(--font-code); font-size:20px; color:#f0883e; margin:0 0 8px; }
+.pitfall p{ font-size:17px; color:var(--text); margin:0; line-height:1.4; }
+
+.meta-row{ font-family:var(--font-code); font-size:19px; color:var(--muted); letter-spacing:.05em; margin-top:30px; }
+.meta-row .sep{ color:var(--line); margin:0 14px; }
+
+.fun-fact{ margin-top:8px; background:rgba(75,139,190,.08); border:1px solid rgba(75,139,190,.4); border-radius:12px; padding:24px 30px; max-width:1560px; }
+.fun-fact .ff-kicker{ font-family:var(--font-code); font-size:18px; color:var(--blue); margin-bottom:8px; letter-spacing:.04em; }
+.fun-fact p{ font-size:19px; color:var(--text); line-height:1.5; margin:0; }
+
+.cta-link{ display:inline-flex; align-items:center; gap:12px; margin-top:38px; font-family:var(--font-code); font-size:24px; color:var(--bg); background:var(--yellow); padding:16px 30px; border-radius:8px; text-decoration:none; font-weight:700; }
+
+.slide--title .slide-inner{ display:flex; flex-direction:column; justify-content:center; height:100%; padding-top:0; padding-bottom:0; }
+.title-week{ font-family:var(--font-code); font-size:22px; color:var(--blue); letter-spacing:.14em; margin-bottom:22px; }
+.title-badge{ display:inline-flex; align-items:center; gap:10px; font-family:var(--font-code); font-size:20px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:8px 18px; margin-top:38px; }
+.title-badge .b-dot{ width:9px; height:9px; border-radius:50%; background:var(--mint); }
+
+.top-nav{ position:fixed; top:18px; right:22px; z-index:1000; display:flex; gap:10px; font-family:var(--font-code); }
+.top-nav a{ color:var(--muted); background:rgba(22,27,34,.9); border:1px solid var(--line); padding:8px 14px; border-radius:6px; font-size:13px; text-decoration:none; letter-spacing:.04em; }
+.top-nav a:hover{ color:var(--mint); border-color:var(--mint); }
+
+.deck-controls{ display:flex; align-items:center; gap:18px; background:rgba(13,17,23,.92); border:1px solid var(--line); border-radius:999px; padding:10px 18px; font-family:var(--font-code); }
+.deck-controls .breadcrumb{ font-size:13px; color:var(--muted); letter-spacing:.03em; }
+.deck-controls .counter{ font-size:13px; color:var(--yellow); min-width:70px; text-align:center; }
+.nav-btn{ font-family:var(--font-code); font-size:13px; color:var(--bg); background:var(--mint); border-radius:999px; padding:7px 16px; text-decoration:none; font-weight:700; }
+.nav-btn.disabled{ background:var(--line); color:var(--muted); pointer-events:none; }
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--mint); outline-offset: 4px; }
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- ============ SLIDE 1: TITLE ============ -->
+    <section class="slide slide--title">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="title-week" data-editable>WEEK 1 · THE INTERPRETER</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; week_1/class_3</div>
+        <h1 class="slide-title" data-editable>Calling APIs &amp; Your First <span class="accent">AI Script</span></h1>
+        <p class="subtitle" data-editable>Everything so far was preparation. Today you send a real HTTP request to a real language model — and read back a real response.</p>
+        <div class="title-badge"><span class="b-dot"></span><span data-editable>$ python3 class_3.py</span><span class="blink">▍</span></div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 2: AGENDA ============ -->
+    <section class="slide slide--agenda">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="kicker" data-editable>&gt;&gt;&gt; agenda</div>
+        <h2 class="slide-title" data-editable>Today's Map</h2>
+        <ol class="agenda-list">
+          <li><span class="num">01</span><span class="txt" data-editable><b>What Is an API &amp; HTTP?</b> — client, server, requests, responses</span></li>
+          <li><span class="num">02</span><span class="txt" data-editable><b>Secrets &amp; Environment Variables</b> — never hardcode a key</span></li>
+          <li><span class="num">03</span><span class="txt" data-editable><b>The requests Library</b> — GET/POST, status codes, .json()</span></li>
+          <li><span class="num">04</span><span class="txt" data-editable><b>Anatomy of an LLM API Call</b> — messages, roles, responses</span></li>
+          <li><span class="num">05</span><span class="txt" data-editable><b>Your First End-to-End AI Script</b> — put it all together</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 3: WHAT IS AN API ============ -->
+    <section class="slide slide--concept">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; concept 01</div>
+        <h2 class="slide-title" data-editable>Client, Server, Request, Response</h2>
+        <ul class="reading-list">
+          <li data-editable>An <b>API</b> is a contract: send a request in an expected shape, get a response back</li>
+          <li data-editable><b>HTTP</b> is the protocol underneath — your script is the "client," the AI provider runs the "server"</li>
+          <li data-editable>Every request has a <b>method</b> (GET to fetch, POST to send data), a <b>URL</b> (the endpoint), <b>headers</b> (metadata like auth), and often a <b>body</b> (the payload)</li>
+          <li data-editable>Every response has a <b>status code</b> (200 OK, 401 unauthorized, 429 rate limited, 500 server error) and a body</li>
+          <li data-editable>Calling an LLM API is just: POST a JSON body to an endpoint, get a JSON body back</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 4: SECRETS & ENV VARS ============ -->
+    <section class="slide slide--concept">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="kicker" data-editable>&gt;&gt;&gt; concept 02</div>
+        <h2 class="slide-title" data-editable>Secrets &amp; Environment Variables</h2>
+        <div class="two-col">
+          <ul class="reading-list">
+            <li data-editable>API keys are secrets — anyone with your key can spend your money and act as you</li>
+            <li data-editable>Never hardcode a key in a script, and never commit one to git</li>
+            <li data-editable>Environment variables keep secrets outside your code — set them in your shell or a <code>.env</code> file, read with <code>os.environ</code></li>
+            <li data-editable><code>os.environ.get(...)</code> returns <code>None</code> — not an error — if a variable isn't set; always check before using it</li>
+          </ul>
+          <div class="code-block" data-editable><span class="kw">import</span> os
+
+<span class="kw">api_key</span> = os.environ.get(<span class="st">"OPENAI_API_KEY"</span>)
+<span class="kw">if</span> <span class="kw">not</span> api_key:
+    <span class="fn">print</span>(<span class="st">"Missing OPENAI_API_KEY — set it first."</span>)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 5: REQUESTS LIBRARY ============ -->
+    <section class="slide slide--concept">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; concept 03</div>
+        <h2 class="slide-title" data-editable>The requests Library Basics</h2>
+        <div class="two-col">
+          <ul class="reading-list">
+            <li data-editable><code>requests</code> is Python's standard tool for HTTP calls — <code>pip install requests</code></li>
+            <li data-editable><code>requests.get(url)</code> fetches data; <code>requests.post(url, json=payload)</code> sends a JSON body</li>
+            <li data-editable><code>response.status_code</code> tells you if it worked; <code>response.json()</code> parses the reply</li>
+            <li data-editable>Always set a <code>timeout=</code> so a hung connection doesn't freeze your script</li>
+          </ul>
+          <div class="code-block" data-editable><span class="kw">import</span> requests
+
+<span class="kw">resp</span> = requests.get(
+    <span class="st">"https://api.example.com/ping"</span>, timeout=<span class="nm">10</span>
+)
+<span class="fn">print</span>(resp.status_code, resp.json())</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 6: ANATOMY OF LLM CALL ============ -->
+    <section class="slide slide--concept">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="kicker" data-editable>&gt;&gt;&gt; concept 04</div>
+        <h2 class="slide-title" data-editable>Anatomy of a Chat Completion Request</h2>
+        <div class="two-col">
+          <ul class="reading-list">
+            <li data-editable><b>Endpoint:</b> a URL like the OpenAI or Anthropic chat/messages endpoint</li>
+            <li data-editable><b>Headers</b> carry your API key and content type</li>
+            <li data-editable><b>Body</b> carries the model name, a list of role-tagged <code>messages</code>, and settings like <code>temperature</code></li>
+            <li data-editable>The reply nests the model's text inside the response body — the SDK unwraps it for you</li>
+          </ul>
+          <div class="code-block" data-editable>{
+  <span class="st">"model"</span>: <span class="st">"gpt-4o-mini"</span>,
+  <span class="st">"messages"</span>: [
+    {<span class="st">"role"</span>: <span class="st">"system"</span>, <span class="st">"content"</span>: <span class="st">"You are concise."</span>},
+    {<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: <span class="st">"What is a variable?"</span>}
+  ]
+}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 7: HANDLING RESPONSE ============ -->
+    <section class="slide slide--concept">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; concept 05</div>
+        <h2 class="slide-title" data-editable>Reading the Response, Safely</h2>
+        <div class="two-col">
+          <ul class="reading-list">
+            <li data-editable>Wrap the call in <code>try/except</code> — network calls fail in ways your code can't prevent</li>
+            <li data-editable>Check the status before trusting the data — a 429 or 401 needs different handling than a 200</li>
+            <li data-editable>Set a <code>max_tokens</code> limit so a runaway response doesn't blow your budget</li>
+            <li data-editable>Log the raw response while developing — you can't debug what you can't see</li>
+          </ul>
+          <div class="code-block" data-editable><span class="kw">try</span>:
+    resp = client.chat.completions.create(
+        model=<span class="st">"gpt-4o-mini"</span>, messages=messages, max_tokens=<span class="nm">200</span>
+    )
+    text = resp.choices[<span class="nm">0</span>].message.content
+<span class="kw">except</span> Exception <span class="kw">as</span> e:
+    text = <span class="st">f"Request failed: {e}"</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 8: DEMO ============ -->
+    <section class="slide slide--demo">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="kicker" data-editable>&gt;&gt;&gt; demo.run()</div>
+        <h2 class="slide-title" data-editable>Your First AI Script, End to End</h2>
+        <div class="two-col">
+          <div class="code-block" data-editable><span class="kw">import</span> os
+<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+
+<span class="kw">api_key</span> = os.environ.get(<span class="st">"OPENAI_API_KEY"</span>)
+<span class="kw">if</span> <span class="kw">not</span> api_key:
+    <span class="kw">raise</span> SystemExit(<span class="st">"Set OPENAI_API_KEY first."</span>)
+
+<span class="kw">client</span> = OpenAI(api_key=api_key)
+<span class="kw">response</span> = client.chat.completions.create(
+    model=<span class="st">"gpt-4o-mini"</span>,
+    messages=[{<span class="st">"role"</span>: <span class="st">"user"</span>,
+                <span class="st">"content"</span>: <span class="st">"Explain variables in one sentence."</span>}],
+)
+<span class="fn">print</span>(response.choices[<span class="nm">0</span>].message.content)</div>
+          <div>
+            <div class="terminal-block" data-editable><span class="prompt">// example output —</span>
+<span class="prompt">yours will vary:</span>
+A variable is a name that
+points to a value stored
+in memory, so you can
+reuse or change it later.</div>
+            <div class="meta-row" data-editable style="margin-top:22px;">Five lines connect an environment variable, an HTTP call, and a printed string. Swap the SDK for anthropic and the shape barely changes.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 9: PITFALLS ============ -->
+    <section class="slide slide--pitfalls">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; common pitfalls</div>
+        <h2 class="slide-title" data-editable>Where Beginners Get Tripped Up</h2>
+        <div class="pitfall-grid">
+          <div class="pitfall"><h3>Hardcoding keys</h3><p data-editable>Leaking a key in a script — or a public repo — is mistake #1. Use env vars and add <code>.env</code> to <code>.gitignore</code>.</p></div>
+          <div class="pitfall"><h3>Ignoring status codes</h3><p data-editable>A 200, a 429 (rate limited), and a 401 (bad key) all need different handling — check before parsing.</p></div>
+          <div class="pitfall"><h3>No timeout</h3><p data-editable>A hung request can block your script forever. Always pass <code>timeout=</code>.</p></div>
+          <div class="pitfall"><h3>Confusing roles</h3><p data-editable><code>system</code> sets behavior once, <code>user</code> is the human turn, <code>assistant</code> is the model's turn.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 10: CHALLENGE PREVIEW ============ -->
+    <section class="slide slide--challenge">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="kicker" data-editable>&gt;&gt;&gt; challenges.md</div>
+        <h2 class="slide-title" data-editable>Your Turn: Hands-On Challenges</h2>
+        <ul class="reading-list">
+          <li data-editable><b>1.</b> Write a <code>safe_get_env(name)</code> helper with a friendly missing-key message</li>
+          <li data-editable><b>2.</b> Make a GET request to a public test API and print its status code + JSON</li>
+          <li data-editable><b>3.</b> Build the message list for a 3-turn conversation as Python dicts</li>
+          <li data-editable><b>4.</b> Write a <code>call_llm(prompt)</code> function that returns just the response text</li>
+          <li data-editable><b>5. Stretch:</b> read a prompt from input(), call the API, log the pair to a JSON file</li>
+        </ul>
+        <div class="meta-row" data-editable>Open class_3.ipynb to write and run your solutions with your own API key.</div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 11: RECAP ============ -->
+    <section class="slide slide--recap">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <ul class="reading-list">
+          <li data-editable>An API call is just an HTTP request/response, carrying JSON — everything from Class 2 in a new context</li>
+          <li data-editable>Secrets belong in environment variables, never in your source code</li>
+          <li data-editable>An SDK (or <code>requests</code>) handles the HTTP plumbing so you focus on the payload</li>
+          <li data-editable>An LLM API call is a list of role-tagged messages in, one generated message out</li>
+        </ul>
+        <div class="fun-fact">
+          <div class="ff-kicker" data-editable>week 1, closed &gt;&gt;&gt;</div>
+          <p data-editable>You've now written a complete, working AI script — from <code>x = 5</code> to a live model response. That's Week 1: you read Python fluently enough to keep Week 2's ideas about how LLMs actually work grounded in real, runnable code.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SLIDE 12: NEXT (WEEK) ============ -->
+    <section class="slide slide--next">
+      <div class="stage-chrome">
+        <div class="tabbar"><div class="traffic"><span></span><span></span><span></span></div>
+          <div class="tab active"><span class="dot"></span>class_3.py</div><div class="tab">helpers.py</div><div class="tab">.env</div>
+        </div>
+        <div class="gutter" data-gutter></div>
+      </div>
+      <div class="slide-inner">
+        <div class="docmark">&quot;&quot;&quot;</div>
+        <div class="kicker" data-editable>&gt;&gt;&gt; up_next</div>
+        <h2 class="slide-title" data-editable>Next Up: Week 2 — Introduction to LLMs</h2>
+        <p class="subtitle" data-editable>You know how to talk TO an API. Week 2 opens up what's actually happening on the other end: how large language models predict text, what tokens and temperature control, and where they fall short.</p>
+        <a class="cta-link" href="../week-2/index.html">Continue to Week 2 →</a>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="top-nav">
+  <a href="../index.html">⌂ Course</a>
+  <a href="index.html">Week 1</a>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<div class="deck-controls">
+  <a class="nav-btn" href="class-2.html">‹ Prev</a>
+  <span class="breadcrumb">GenAI Foundations / Week 1 / Class 3</span>
+  <span class="counter" id="slideCounter">01 / 12</span>
+  <a class="nav-btn" href="../week-2/index.html">Next ›</a>
+</div>
+
+<script>
+document.querySelectorAll('[data-gutter]').forEach((g)=>{
+  let html = '';
+  for (let i=1;i<=38;i++){ html += String(i).padStart(2,'0') + '<br>'; }
+  g.innerHTML = html;
+});
+</script>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+</script>
+
+<script>
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

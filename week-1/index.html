@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 — Python Foundations for Generative AI</title>
+<meta name="description" content="Week 1 of Foundations of Generative AI & LLM Applications: Python syntax, text & JSON, and calling your first AI API.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --line:#21262d;
+  --blue:#4B8BBE; --yellow:#FFD43B; --mint:#7ee787; --text:#c9d1d9; --muted:#6e7681;
+  --font-display:'JetBrains Mono', monospace; --font-body:'IBM Plex Sans', sans-serif; --font-code:'JetBrains Mono', monospace;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  background:var(--bg); color:var(--text); font-family:var(--font-body);
+  min-height:100vh; position:relative;
+}
+body::before{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:linear-gradient(rgba(75,139,190,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(75,139,190,.05) 1px, transparent 1px);
+  background-size:34px 34px;
+}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.2s!important; } }
+
+/* fake editor window chrome wrapping the whole page */
+.window{ position:relative; z-index:1; max-width:1180px; margin:48px auto 96px; border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,.45); }
+.win-tabbar{ background:#0a0d12; border-bottom:1px solid var(--line); display:flex; align-items:center; padding:14px 18px; gap:18px; }
+.traffic{ display:flex; gap:8px; }
+.traffic span{ width:12px; height:12px; border-radius:50%; display:inline-block; }
+.traffic span:nth-child(1){ background:#ff5f56; } .traffic span:nth-child(2){ background:#ffbd2e; } .traffic span:nth-child(3){ background:#27c93f; }
+.win-tab{ font-family:var(--font-code); font-size:13px; color:var(--yellow); background:var(--bg); border-top:2px solid var(--yellow); padding:8px 16px; border-radius:4px 4px 0 0; }
+.win-body{ background:var(--bg); padding:56px 64px 64px; }
+
+.back-link{ display:inline-flex; align-items:center; gap:8px; font-family:var(--font-code); font-size:14px; color:var(--muted); text-decoration:none; margin-bottom:34px; }
+.back-link:hover{ color:var(--mint); }
+
+.kicker{ font-family:var(--font-code); font-size:15px; letter-spacing:.14em; color:var(--mint); text-transform:uppercase; margin-bottom:18px; }
+h1{ font-family:var(--font-display); font-weight:800; font-size:clamp(32px,4.2vw,52px); line-height:1.15; margin-bottom:18px; }
+h1 span{ color:var(--yellow); }
+.lede{ font-size:18px; color:var(--muted); max-width:680px; line-height:1.65; margin-bottom:20px; }
+.docline{ font-family:var(--font-code); font-size:15px; color:#30363d; margin-bottom:44px; }
+.docline b{ color:var(--blue); }
+
+.section-label{ font-family:var(--font-code); font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:20px; }
+
+.classes{ display:flex; flex-direction:column; gap:18px; margin-bottom:52px; }
+.class-card{
+  display:flex; gap:24px; align-items:flex-start; background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:26px 28px; text-decoration:none; color:var(--text); transition:transform .2s ease, border-color .2s ease;
+}
+.class-card:hover{ transform:translateX(6px); border-color:var(--mint); }
+.class-num{ font-family:var(--font-display); font-weight:800; font-size:32px; color:var(--blue); flex:0 0 auto; width:52px; }
+.class-body h2{ font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--text); margin-bottom:8px; }
+.class-body p{ font-size:16px; color:var(--muted); line-height:1.5; max-width:640px; }
+.class-arrow{ margin-left:auto; font-family:var(--font-code); color:var(--mint); font-size:14px; flex:0 0 auto; align-self:center; }
+
+.readme{ background:#0a0d12; border:1px solid var(--line); border-radius:10px; padding:24px 28px; font-family:var(--font-code); font-size:14px; color:var(--muted); line-height:1.7; }
+.readme .k{ color:var(--blue); }
+.readme .s{ color:var(--mint); }
+
+footer{ position:relative; z-index:1; text-align:center; font-family:var(--font-code); font-size:12px; color:var(--muted); letter-spacing:.06em; padding-bottom:40px; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="win-tabbar">
+    <div class="traffic"><span></span><span></span><span></span></div>
+    <div class="win-tab">week_1/README.md</div>
+  </div>
+  <div class="win-body">
+    <a class="back-link" href="../index.html">&larr; Back to course</a>
+
+    <div class="kicker">&gt;&gt;&gt; Week 1 · Theme: The Interpreter</div>
+    <h1>Python Foundations for <span>Generative AI</span></h1>
+    <p class="lede">Before you can build with large language models, you need to be fluent in the language that talks to them. Three classes, one running theme: read the syntax, then use it to speak JSON and call a real AI API.</p>
+    <div class="docline"><b>"""</b> three classes · beginner friendly · ends with a working AI script <b>"""</b></div>
+
+    <div class="section-label">// Select a Class</div>
+    <div class="classes">
+      <a class="class-card" href="class-1.html">
+        <span class="class-num">01</span>
+        <span class="class-body">
+          <h2>Python Syntax, Control Flow &amp; Data Structures</h2>
+          <p>Variables and types, if/for/while, and the four containers — lists, tuples, dicts, sets — that hold your data.</p>
+        </span>
+        <span class="class-arrow">Start →</span>
+      </a>
+      <a class="class-card" href="class-2.html">
+        <span class="class-num">02</span>
+        <span class="class-body">
+          <h2>Working with Text, Strings &amp; JSON</h2>
+          <p>String methods, f-strings, parsing and generating JSON, and reading/writing files — the format every AI API speaks.</p>
+        </span>
+        <span class="class-arrow">Start →</span>
+      </a>
+      <a class="class-card" href="class-3.html">
+        <span class="class-num">03</span>
+        <span class="class-body">
+          <h2>Calling APIs &amp; Your First AI Script</h2>
+          <p>HTTP and requests basics, environment variables and secrets, and a script that sends a prompt to a real LLM and prints the reply.</p>
+        </span>
+        <span class="class-arrow">Start →</span>
+      </a>
+    </div>
+
+    <div class="section-label">// Notes</div>
+    <div class="readme"><span class="k">class</span> Week1: <span class="s"># "The Interpreter"</span><br>
+&nbsp;&nbsp;classes = <span class="s">3</span><br>
+&nbsp;&nbsp;notebooks = <span class="s">True</span>  <span class="s"># class_1.ipynb .. class_3.ipynb</span><br>
+&nbsp;&nbsp;prereqs = <span class="s">None</span>  <span class="s"># beginner friendly</span><br>
+&nbsp;&nbsp;next_week = <span class="s">"Introduction to LLMs"</span></div>
+  </div>
+</div>
+<footer>Foundations of Generative AI &amp; LLM Applications — Week 1 / 6</footer>
+</body>
+</html>

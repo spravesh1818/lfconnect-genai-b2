@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 2: Tokens, Temperature &amp; Context Windows — Week 2</title>
+<meta name="description" content="Week 2, Class 2: tokenization mechanics, temperature and top-p sampling, context window limits, and cost/latency implications.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 2 THEME — "THE BLACK BOX / NEURAL SIGNAL"
+   =========================================== */
+:root{
+  --bg:#12071f;
+  --panel:#1d0f30;
+  --panel2:#26153f;
+  --magenta:#d946ef;
+  --cyan:#22d3ee;
+  --amber:#f5a524;
+  --text:#eee6fb;
+  --muted:#a98fc9;
+  --font-display:'Unbounded',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'Space Mono',monospace;
+  --stage-bg:var(--bg);
+  --slide-bg:var(--bg);
+}
+*{box-sizing:border-box;}
+.deck-stage{
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(ellipse 900px 600px at 85% -10%, rgba(217,70,239,.16) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 700px at -5% 110%, rgba(34,211,238,.14) 0%, transparent 60%),
+    var(--bg);
+}
+.deck-stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(238,230,251,.07) 1.5px, transparent 1.5px);
+  background-size:44px 44px;
+  opacity:.5;
+}
+.slide-inner{position:absolute;inset:0;padding:84px 128px 96px;display:flex;flex-direction:column;z-index:1;}
+.eyebrow{font-family:var(--font-mono);font-size:22px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);margin:0 0 18px;display:flex;align-items:center;gap:14px;}
+.eyebrow::before{content:'';width:34px;height:2px;background:var(--cyan);display:inline-block;}
+h1.slide-title, h2.slide-title{font-family:var(--font-display);font-weight:900;color:var(--text);margin:0 0 8px;letter-spacing:-.01em;}
+h1.slide-title{font-size:74px;line-height:1.05;}
+h2.slide-title{font-size:56px;line-height:1.12;}
+.subtitle{font-family:var(--font-body);font-size:26px;color:var(--muted);margin:0 0 36px;max-width:1300px;line-height:1.5;}
+.rule{width:100%;height:1px;background:linear-gradient(90deg, rgba(217,70,239,.5), rgba(34,211,238,.15), transparent);margin:0 0 36px;}
+
+ul.bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:22px;}
+ul.bullets li{font-size:26px;line-height:1.5;padding-left:40px;position:relative;color:var(--text);}
+ul.bullets li::before{content:'▹';color:var(--magenta);position:absolute;left:0;top:0;font-size:26px;}
+ul.bullets li b, ul.bullets li strong{color:var(--cyan);font-weight:600;}
+ul.bullets.tight li{font-size:22px;}
+
+.card-grid{display:grid;gap:26px;flex:1;align-content:start;}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.card{background:var(--panel);border:1px solid rgba(217,70,239,.28);border-radius:18px;padding:30px 32px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+.card.cy{border-color:rgba(34,211,238,.32);}
+.card.am{border-color:rgba(245,165,36,.4);}
+.card h3{font-family:var(--font-display);font-weight:700;font-size:25px;color:var(--magenta);margin:0 0 12px;}
+.card.cy h3{color:var(--cyan);}
+.card.am h3{color:var(--amber);}
+.card p{font-size:19px;line-height:1.5;color:var(--text);margin:0;opacity:.92;}
+.card .num{font-family:var(--font-mono);font-size:15px;color:var(--muted);letter-spacing:.1em;margin-bottom:8px;display:block;}
+
+.pit-card{background:var(--panel);border-left:4px solid var(--magenta);border-radius:10px;padding:22px 26px;}
+.pit-card h3{font-family:var(--font-body);font-weight:600;font-size:21px;color:var(--text);margin:0 0 8px;display:flex;gap:12px;align-items:flex-start;}
+.pit-card h3::before{content:'✕';color:var(--magenta);font-family:var(--font-mono);}
+.pit-card p{font-size:18px;color:var(--muted);line-height:1.5;margin:0;padding-left:32px;}
+
+.token-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-family:var(--font-mono);}
+.token-chip{background:var(--panel2);border:1.5px solid var(--cyan);color:var(--cyan);padding:12px 22px;border-radius:9px;font-size:26px;font-weight:700;}
+.token-sep{color:var(--muted);font-size:26px;}
+
+.code-box{background:#0a0416;border:1px solid rgba(34,211,238,.3);border-radius:14px;padding:26px 30px;font-family:var(--font-mono);font-size:20px;color:#c7f7ff;line-height:1.7;overflow:hidden;}
+.code-box .cm{color:var(--muted);}
+.code-box .kw{color:var(--magenta);}
+.code-box .st{color:var(--amber);}
+
+.two-col{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;flex:1;align-items:center;}
+.flex-fill{flex:1;display:flex;flex-direction:column;justify-content:center;}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:16px;letter-spacing:.1em;text-transform:uppercase;color:var(--bg);background:var(--cyan);padding:8px 16px;border-radius:6px;font-weight:700;}
+.tag.mg{background:var(--magenta);}
+.tag.am{background:var(--amber);}
+.center-col{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;gap:22px;}
+
+.title-slide-inner{display:flex;flex-direction:column;justify-content:center;height:100%;}
+.class-chip{font-family:var(--font-mono);font-size:20px;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;margin-bottom:22px;}
+.mega-title{font-family:var(--font-display);font-weight:900;font-size:88px;line-height:1.04;color:var(--text);margin:0 0 26px;max-width:1550px;}
+.mega-title .hl{color:var(--magenta);}
+.deck-sub{font-size:28px;color:var(--muted);max-width:1150px;line-height:1.55;margin:0 0 40px;}
+.theme-strap{font-family:var(--font-mono);font-size:18px;color:var(--muted);letter-spacing:.08em;}
+.theme-strap b{color:var(--cyan);}
+
+.recap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:24px;}
+.recap-list li{display:flex;gap:22px;align-items:flex-start;font-size:26px;line-height:1.5;}
+.recap-num{font-family:var(--font-display);font-weight:900;font-size:32px;color:var(--magenta);min-width:56px;}
+
+.next-card{background:var(--panel);border:1px solid rgba(34,211,238,.35);border-radius:22px;padding:52px 60px;max-width:1200px;margin:0 auto;text-align:center;}
+.next-card .tag{margin-bottom:20px;}
+.next-card h2{font-family:var(--font-display);font-weight:900;font-size:52px;color:var(--text);margin:0 0 18px;}
+.next-card p{font-size:24px;color:var(--muted);line-height:1.5;margin:0;}
+
+.deck-controls{display:flex;gap:18px;align-items:center;background:rgba(29,15,48,.85);border:1px solid rgba(217,70,239,.3);backdrop-filter:blur(6px);padding:10px 22px;border-radius:999px;font-family:var(--font-mono);font-size:14px;color:var(--muted);}
+.deck-controls .crumb{color:var(--cyan);}
+.deck-controls .sep{opacity:.4;}
+.deck-controls .counter{color:var(--text);font-weight:700;}
+.corner-links{position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:10px;font-family:var(--font-mono);font-size:13px;}
+.corner-links a{color:var(--muted);text-decoration:none;border:1px solid rgba(238,230,251,.25);padding:8px 14px;border-radius:8px;background:rgba(29,15,48,.7);transition:color .2s,border-color .2s;}
+.corner-links a:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn{position:fixed;bottom:20px;z-index:1000;font-family:var(--font-mono);font-size:14px;text-decoration:none;color:var(--muted);background:rgba(29,15,48,.75);border:1px solid rgba(34,211,238,.3);padding:12px 18px;border-radius:10px;transition:color .2s,border-color .2s;}
+.nav-btn:hover{color:var(--cyan);border-color:var(--cyan);}
+.nav-btn.prev{left:20px;}
+.nav-btn.next{right:20px;}
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--cyan); outline-offset: 4px; }
+
+/* --- class-2 specific components --- */
+.prob-row{display:flex;align-items:center;gap:18px;margin-bottom:16px;}
+.prob-label{font-family:var(--font-mono);font-size:20px;width:130px;color:var(--text);flex-shrink:0;}
+.prob-track{flex:1;height:26px;background:var(--panel2);border-radius:8px;overflow:hidden;}
+.prob-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));border-radius:8px;}
+.prob-pct{font-family:var(--font-mono);font-size:18px;color:var(--muted);width:64px;text-align:right;flex-shrink:0;}
+
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.gauge-val{font-family:var(--font-mono);font-size:24px;color:var(--amber);font-weight:700;}
+.gauge-caption{font-family:var(--font-body);font-size:18px;color:var(--muted);text-align:center;max-width:320px;}
+
+.context-strip{font-family:var(--font-mono);font-size:34px;color:var(--cyan);background:var(--panel2);border:1px solid rgba(34,211,238,.4);border-radius:14px;padding:22px 36px;display:inline-flex;align-items:center;gap:6px;}
+.context-strip .bracket{color:var(--magenta);font-weight:700;}
+.context-strip .num{color:var(--text);}
+.cap-bar{width:100%;height:22px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:18px;border:1px solid rgba(238,230,251,.1);}
+.cap-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));}
+.cap-caption{font-family:var(--font-mono);font-size:16px;color:var(--muted);margin-top:8px;}
+
+.price-table{width:100%;border-collapse:collapse;font-size:20px;}
+.price-table th{font-family:var(--font-mono);text-align:left;color:var(--cyan);padding:12px 18px;border-bottom:2px solid rgba(34,211,238,.3);font-size:16px;letter-spacing:.06em;text-transform:uppercase;}
+.price-table td{padding:16px 18px;border-bottom:1px solid rgba(238,230,251,.08);}
+.price-table tr:last-child td{border-bottom:none;}
+.price-table td.mono{font-family:var(--font-mono);color:var(--text);}
+
+.egg-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;flex:1;}
+.egg-col{background:var(--panel);border-radius:18px;padding:30px 34px;display:flex;flex-direction:column;gap:16px;}
+.egg-col.low{border:1px solid rgba(34,211,238,.4);}
+.egg-col.high{border:1px solid rgba(217,70,239,.4);}
+.egg-head{font-family:var(--font-mono);font-size:20px;letter-spacing:.05em;}
+.egg-col.low .egg-head{color:var(--cyan);}
+.egg-col.high .egg-head{color:var(--magenta);}
+.egg-out{background:#0a0416;border-radius:10px;padding:20px 22px;font-family:var(--font-mono);font-size:19px;line-height:1.6;color:var(--text);flex:1;}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <section class="slide">
+      <div class="slide-inner title-slide-inner">
+        <div class="class-chip" data-editable>WEEK 2 · THE BLACK BOX / NEURAL SIGNAL · CLASS 2</div>
+        <h1 class="mega-title" data-editable>Tokens, Temperature <span class="hl">&amp; Context Windows</span></h1>
+        <p class="deck-sub" data-editable>Every LLM call is measured, priced, and shaped by units you can't see in the chat box: tokens. This class opens that mechanism — tokenization, sampling controls, and the limits of the context window.</p>
+        <div class="theme-strap">GenAI Foundations <span style="opacity:.5">/</span> Week 2: Introduction to LLMs <span style="opacity:.5">/</span> <b>Class 2</b></div>
+      </div>
+    </section>
+
+    <!-- 2: AGENDA -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Today's Map</div>
+        <h2 class="slide-title" data-editable>From Text to Tokens to a Bill</h2>
+        <p class="subtitle" data-editable>We'll trace a prompt's entire journey through an LLM API: how it's chopped into tokens, how randomness is dialed in, and where the limits and costs come from.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-3">
+          <div class="card"><span class="num">01</span><h3 data-editable>Tokenization Mechanics</h3><p data-editable>How text is broken into the sub-word units models actually process.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Temperature &amp; Top-p</h3><p data-editable>The two dials that control how predictable or surprising output is.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>The Context Window</h3><p data-editable>Why every model has a hard limit on how much text it can "see" at once.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Cost &amp; Latency</h3><p data-editable>Tokens are the meter — more of them means slower and pricier calls.</p></div>
+          <div class="card"><span class="num">05</span><h3 data-editable>Live Demo</h3><p data-editable>Counting real tokens and watching temperature change real output.</p></div>
+          <div class="card cy"><span class="num">06</span><h3 data-editable>Common Pitfalls</h3><p data-editable>Myths about tokens, determinism, and "just add more context."</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3: CONCEPT - what is a token -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 01</div>
+        <h2 class="slide-title" data-editable>What Is a Token?</h2>
+        <p class="subtitle" data-editable>Models don't read letters or whole words — they read <b style="color:var(--cyan)">tokens</b>: sub-word chunks produced by a tokenizer before any prediction happens.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>A tokenizer splits text into a fixed vocabulary of common chunks — whole words, word pieces, punctuation, even single characters.</li>
+            <li data-editable>Splitting below the word level lets the model handle rare words, typos, and new languages without an infinite vocabulary.</li>
+            <li data-editable>Common short words are often one token; longer or unusual words split into two or more.</li>
+            <li data-editable>Roughly speaking, 1,000 tokens ≈ 750 English words — but code, non-English text, and numbers tokenize less efficiently.</li>
+          </ul>
+          <div class="flex-fill" data-editable>
+            <div class="token-row" style="margin-bottom:20px;">
+              <span class="token-chip">gen</span><span class="token-sep">|</span>
+              <span class="token-chip">era</span><span class="token-sep">|</span>
+              <span class="token-chip">tive</span>
+            </div>
+            <div class="token-row">
+              <span class="token-chip">token</span><span class="token-sep">|</span>
+              <span class="token-chip">ization</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4: CONCEPT - logits/probabilities -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 02</div>
+        <h2 class="slide-title" data-editable>From Probabilities to a Chosen Word</h2>
+        <p class="subtitle" data-editable>For every next token, the model doesn't output one answer — it outputs a full probability ranking over its entire vocabulary.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <div data-editable>
+            <p style="font-family:var(--font-mono);font-size:20px;color:var(--muted);margin-bottom:20px;">prompt: "The chef added a pinch of..."</p>
+            <div class="prob-row"><span class="prob-label">salt</span><div class="prob-track"><div class="prob-fill" style="width:58%"></div></div><span class="prob-pct">58%</span></div>
+            <div class="prob-row"><span class="prob-label">sugar</span><div class="prob-track"><div class="prob-fill" style="width:19%"></div></div><span class="prob-pct">19%</span></div>
+            <div class="prob-row"><span class="prob-label">pepper</span><div class="prob-track"><div class="prob-fill" style="width:12%"></div></div><span class="prob-pct">12%</span></div>
+            <div class="prob-row"><span class="prob-label">cinnamon</span><div class="prob-track"><div class="prob-fill" style="width:6%"></div></div><span class="prob-pct">6%</span></div>
+            <div class="prob-row"><span class="prob-label">glitter</span><div class="prob-track"><div class="prob-fill" style="width:1%"></div></div><span class="prob-pct">1%</span></div>
+          </div>
+          <ul class="bullets">
+            <li data-editable>This ranked list is called the <b>logits</b> (turned into percentages via a function called softmax).</li>
+            <li data-editable>A <b>sampling strategy</b> then picks one token from this distribution — it doesn't always take the top choice.</li>
+            <li data-editable>Two dials control that choice: <b>temperature</b> and <b>top-p</b> — covered next.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: CONCEPT - temperature dial -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 03</div>
+        <h2 class="slide-title" data-editable>Temperature: the Randomness Dial</h2>
+        <p class="subtitle" data-editable>Temperature reshapes the probability ranking before a token is sampled — it doesn't change what the model "knows," only how boldly it gambles.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable><b style="color:var(--amber)">Low temperature (≈0–0.3):</b> sharpens the distribution — the top choice dominates, output is focused and repeatable.</li>
+            <li data-editable><b style="color:var(--amber)">High temperature (≈1.0–2.0):</b> flattens the distribution — lower-ranked tokens get a real chance, output is varied and surprising.</li>
+            <li data-editable>Good defaults: low temperature for factual Q&amp;A or code; higher temperature for brainstorming or creative writing.</li>
+            <li data-editable>Temperature is a request parameter you set per API call — it isn't a property of the model itself.</li>
+          </ul>
+          <div class="gauge-wrap" data-editable>
+            <svg viewBox="0 0 220 140" width="320">
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#3a2a52" stroke-width="16" stroke-linecap="round"/>
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#f5a524" stroke-width="16" stroke-linecap="round" stroke-dasharray="98.9 282.7"/>
+              <line x1="110" y1="120" x2="110" y2="40" stroke="#f5a524" stroke-width="5" stroke-linecap="round" transform="rotate(-27 110 120)"/>
+              <circle cx="110" cy="120" r="9" fill="#f5a524"/>
+              <text x="18" y="138" fill="#a98fc9" font-family="Space Mono" font-size="14">0</text>
+              <text x="104" y="138" fill="#a98fc9" font-family="Space Mono" font-size="14">1</text>
+              <text x="190" y="138" fill="#a98fc9" font-family="Space Mono" font-size="14">2</text>
+            </svg>
+            <div class="gauge-val">temperature = 0.7</div>
+            <div class="gauge-caption">A balanced default: mostly coherent, with a little room for variety.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6: EASTER EGG - temp 0.1 vs 1.6 -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">See It In Action</div>
+        <h2 class="slide-title" data-editable>Same Prompt, Two Temperatures</h2>
+        <p class="subtitle" data-editable>Prompt: <i>"Finish this sentence: The old lighthouse keeper opened the door and saw..."</i></p>
+        <div class="rule"></div>
+        <div class="egg-grid">
+          <div class="egg-col low">
+            <div class="egg-head" data-editable>temperature = 0.1 — deterministic</div>
+            <svg viewBox="0 0 220 140" width="180" style="align-self:center;">
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#3a2a52" stroke-width="16" stroke-linecap="round"/>
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#f5a524" stroke-width="16" stroke-linecap="round" stroke-dasharray="14.1 282.7"/>
+              <line x1="110" y1="120" x2="110" y2="40" stroke="#f5a524" stroke-width="5" stroke-linecap="round" transform="rotate(-81 110 120)"/>
+              <circle cx="110" cy="120" r="9" fill="#f5a524"/>
+            </svg>
+            <div class="egg-out" data-editable>"...saw that the light was still working, just as it had every night for thirty years."<br><br><span style="color:var(--muted)">Run it five times → nearly the same sentence every time.</span></div>
+          </div>
+          <div class="egg-col high">
+            <div class="egg-head" data-editable>temperature = 1.6 — wild</div>
+            <svg viewBox="0 0 220 140" width="180" style="align-self:center;">
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#3a2a52" stroke-width="16" stroke-linecap="round"/>
+              <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="#f5a524" stroke-width="16" stroke-linecap="round" stroke-dasharray="226.2 282.7"/>
+              <line x1="110" y1="120" x2="110" y2="40" stroke="#f5a524" stroke-width="5" stroke-linecap="round" transform="rotate(54 110 120)"/>
+              <circle cx="110" cy="120" r="9" fill="#f5a524"/>
+            </svg>
+            <div class="egg-out" data-editable>"...saw a raccoon in a captain's hat, arguing with the fog about maritime law."<br><br><span style="color:var(--muted)">Run it five times → five wildly different, sometimes incoherent, scenes.</span></div>
+          </div>
+        </div>
+        <p class="subtitle" style="margin:24px 0 0;font-size:20px;" data-editable><b style="color:var(--cyan)">The lesson:</b> temperature doesn't add "creativity" from nowhere — it changes how far the sampler strays from the model's most likely guess. Push it too high and fluency itself breaks down.</p>
+      </div>
+    </section>
+
+    <!-- 7: CONCEPT - top-p -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 04</div>
+        <h2 class="slide-title" data-editable>Top-p: a Different Kind of Cutoff</h2>
+        <p class="subtitle" data-editable>Top-p (nucleus sampling) restricts the candidate pool by cumulative probability, instead of reshaping the whole curve like temperature does.</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card cy">
+            <h3 data-editable>How it works</h3>
+            <p data-editable>The model keeps adding candidates — highest probability first — until their combined probability reaches p (e.g. 0.9), then samples only from that shortlist.</p>
+          </div>
+          <div class="card">
+            <h3 data-editable>Why use both</h3>
+            <p data-editable>Temperature and top-p are often combined: temperature sets "how sharp," top-p sets "how many options are even on the table."</p>
+          </div>
+        </div>
+        <ul class="bullets tight" style="margin-top:30px;">
+          <li data-editable>top-p = 1.0 considers the whole vocabulary; top-p = 0.1 restricts sampling to a very narrow, high-confidence shortlist.</li>
+          <li data-editable>Most APIs let you set both — in practice, teams usually tune one and leave the other at its default.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8: CONCEPT - context window -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 05</div>
+        <h2 class="slide-title" data-editable>The Context Window</h2>
+        <p class="subtitle" data-editable>A model can only "see" a fixed number of tokens at once — the system prompt, conversation history, and the model's own output all share this one budget.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>Context windows range from a few thousand tokens to well over a hundred thousand, depending on the model.</li>
+            <li data-editable>Once the budget is full, the oldest turns must be dropped, summarized, or truncated — the model simply can't see them anymore.</li>
+            <li data-editable>A longer context window doesn't guarantee better use of it — models can still miss details buried in the middle of a huge prompt.</li>
+          </ul>
+          <div class="flex-fill" data-editable>
+            <div class="context-strip"><span class="bracket">[</span> ...<span class="num">8,192</span> tokens... <span class="bracket">]</span></div>
+            <div class="cap-bar"><div class="cap-fill" style="width:75%"></div></div>
+            <div class="cap-caption">6,140 / 8,192 tokens used this turn</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9: CONCEPT - cost & latency -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Concept 06</div>
+        <h2 class="slide-title" data-editable>Cost &amp; Latency: Tokens Are the Meter</h2>
+        <p class="subtitle" data-editable>API providers bill per token, usually with separate rates for input and output — and more tokens generally means a slower response too.</p>
+        <div class="rule"></div>
+        <table class="price-table" data-editable>
+          <tr><th>Prompt shape</th><th>Approx. input tokens</th><th>Effect</th></tr>
+          <tr><td>Short question, no history</td><td class="mono">~20</td><td>Fast, cheap</td></tr>
+          <tr><td>+ 10-turn chat history</td><td class="mono">~1,200</td><td>Slower, more expensive</td></tr>
+          <tr><td>+ pasted document context</td><td class="mono">~6,000</td><td>Noticeably slower, priced accordingly</td></tr>
+        </table>
+        <ul class="bullets tight" style="margin-top:28px;">
+          <li data-editable>Trimming unnecessary history or pasted text is a direct lever on both cost and response time.</li>
+          <li data-editable>Longer requested outputs (e.g. "write 2,000 words") also add latency — generation is sequential, one token at a time.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 10: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Demo Walkthrough → notebook</div>
+        <h2 class="slide-title" data-editable>Counting Real Tokens, Live</h2>
+        <p class="subtitle" data-editable>class-2.ipynb uses <b style="color:var(--cyan)">tiktoken</b> to count tokens locally, then calls an LLM API to compare a low- vs high-temperature response.</p>
+        <div class="rule"></div>
+        <div class="two-col">
+          <div class="code-box" data-editable>
+<span class="cm"># count tokens without calling any API</span><br>
+<span class="kw">import</span> tiktoken<br>
+enc = tiktoken.get_encoding(<span class="st">"cl100k_base"</span>)<br>
+tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<br>
+<span class="kw">print</span>(len(tokens), tokens[:5])<br>
+<span class="cm"># → 5 ['Gener', 'ative', ' AI', ' is', ' transformative']</span>
+          </div>
+          <ul class="bullets">
+            <li data-editable>The notebook prints exact token counts for several example sentences, in English and another language.</li>
+            <li data-editable>It then sends the same prompt twice via the API — once at temperature 0.1, once at 1.2 — printing both completions side by side.</li>
+            <li data-editable>A final cell estimates cost for a sample request using a published per-token price.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11: PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Common Pitfalls</div>
+        <h2 class="slide-title" data-editable>Tokens &amp; Sampling Myths</h2>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="pit-card"><h3 data-editable>"Temperature 0 is always identical"</h3><p data-editable>It's close to deterministic, but ties and backend nondeterminism can still cause tiny variation between calls.</p></div>
+          <div class="pit-card"><h3 data-editable>"Tokens = words"</h3><p data-editable>Tokens are sub-word pieces — punctuation, whitespace, and word fragments each count too.</p></div>
+          <div class="pit-card"><h3 data-editable>"More context is always better"</h3><p data-editable>Larger context costs more, runs slower, and doesn't guarantee the model attends evenly to everything inside it.</p></div>
+          <div class="pit-card"><h3 data-editable>"Higher temperature = smarter answers"</h3><p data-editable>Higher temperature means more varied, not more correct — it can just as easily introduce errors.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Hands-On Preview</div>
+        <h2 class="slide-title" data-editable>In the Notebook: Measure Before You Guess</h2>
+        <p class="subtitle" data-editable>class-2.ipynb closes with five challenges. A preview:</p>
+        <div class="rule"></div>
+        <div class="card-grid cols-2">
+          <div class="card"><span class="num">01</span><h3 data-editable>Token-count a paragraph</h3><p data-editable>Compare your own estimate to the tokenizer's real count.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Sweep temperature</h3><p data-editable>Generate at 0, 0.7, and 1.5 and describe the differences.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Estimate a bill</h3><p data-editable>Given a per-token price, compute the cost of a 5,000-token request.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Simulate truncation</h3><p data-editable>Trim a long conversation to fit inside a small pretend context window.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13: RECAP -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow">Recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <div class="rule"></div>
+        <ul class="recap-list">
+          <li><span class="recap-num">01</span><span data-editable>Models process sub-word tokens, not words — tokenization mechanics shape both behavior and cost.</span></li>
+          <li><span class="recap-num">02</span><span data-editable>Temperature and top-p both control sampling randomness, but reshape the candidate pool in different ways.</span></li>
+          <li><span class="recap-num">03</span><span data-editable>The context window is a shared, finite token budget for prompt, history, and output combined.</span></li>
+          <li><span class="recap-num">04</span><span data-editable>Every token costs money and time — trimming context is a real lever on both.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 14: NEXT CLASS -->
+    <section class="slide">
+      <div class="slide-inner center-col">
+        <div class="tag mg">Next Class</div>
+        <div class="next-card">
+          <h2 data-editable>Capabilities, Limitations &amp; Responsible AI</h2>
+          <p data-editable>Now that you can see how LLMs generate and sample text, we'll examine where that mechanism breaks down — hallucination, bias, and what responsible use looks like in practice.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="corner-links">
+  <a href="../index.html">Course</a>
+  <a href="index.html">Week 2</a>
+</div>
+<a class="nav-btn prev" href="class-1.html">← Class 1: What Is an LLM?</a>
+<a class="nav-btn next" href="class-3.html">Class 3: Capabilities &amp; Responsible AI →</a>
+
+<div class="deck-controls">
+  <span class="crumb">GenAI Foundations / Week 2 / Class 2</span>
+  <span class="sep">·</span>
+  <span class="counter" id="slideCounter">01 / 14</span>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

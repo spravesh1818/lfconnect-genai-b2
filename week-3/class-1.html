@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 · Class 1 — ChatGPT &amp; Claude as Workflow Engines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   THEME: THE WORKFLOW CANVAS (Week 3)
+   =========================================== */
+:root{
+  --bg:#FBF6EE;
+  --ink:#1a1a1a;
+  --orange:#FF6B35;
+  --teal:#0EA5A0;
+  --yellow:#FFD166;
+  --muted:#6b6459;
+  --stage-bg:#e9e2d3;
+  --slide-bg:#FBF6EE;
+  --font-display:'Sora',sans-serif;
+  --font-body:'Work Sans',sans-serif;
+}
+*{box-sizing:border-box;}
+body{font-family:var(--font-body);}
+.slide{
+  background-color:var(--bg);
+  background-image:radial-gradient(rgba(26,26,26,.09) 1.6px, transparent 1.6px);
+  background-size:30px 30px;
+  color:var(--ink);
+}
+.slide-inner{ position:absolute; inset:0; padding:84px 112px 78px; display:flex; flex-direction:column; }
+
+.kicker{ font-family:var(--font-display); font-weight:700; font-size:22px; letter-spacing:.14em; text-transform:uppercase; color:var(--orange); margin:0 0 16px; }
+.kicker.teal{color:var(--teal);}
+.slide-title{ font-family:var(--font-display); font-weight:800; font-size:56px; line-height:1.1; margin:0 0 22px; color:var(--ink); max-width:1560px; }
+.slide-sub{ font-size:26px; line-height:1.55; color:#3a352c; max-width:1280px; margin:0 0 6px; font-weight:400; }
+.slide-sub strong{font-weight:500;color:var(--ink);}
+
+/* deck chrome */
+.deck-controls{ display:flex; align-items:center; gap:10px; background:#fff; border:2px solid var(--ink); border-radius:999px; padding:10px 22px; font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--ink); box-shadow:4px 4px 0 rgba(26,26,26,.14); }
+.deck-controls a{color:var(--teal); text-decoration:none;}
+.deck-controls a:hover{text-decoration:underline;}
+.deck-controls .sep{color:rgba(26,26,26,.3);}
+.deck-controls .counter{color:var(--orange); font-variant-numeric:tabular-nums;}
+
+.nav-btn{ position:fixed; bottom:22px; z-index:1000; font-family:var(--font-display); font-weight:700; font-size:15px; text-decoration:none; color:var(--ink); background:#fff; border:2px solid var(--ink); border-radius:999px; padding:12px 22px; box-shadow:4px 4px 0 rgba(26,26,26,.14); transition:transform .15s ease; }
+.nav-btn:hover{ transform:translateY(-2px); }
+.nav-prev{ left:22px; }
+.nav-next{ right:22px; background:var(--orange); color:#fff; }
+
+/* inline editing */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(26,26,26,.6); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--orange); outline-offset: 4px; }
+
+/* node-card motif */
+.node-card{ position:relative; background:#fff; border:2px solid var(--ink); border-radius:20px; padding:28px 30px 24px 34px; box-shadow:7px 7px 0 rgba(26,26,26,.10); }
+.node-dot{ position:absolute; top:18px; left:18px; width:15px; height:15px; border-radius:50%; }
+.node-dot.trigger{background:var(--orange);}
+.node-dot.action{background:var(--teal);}
+.node-dot.info{background:var(--yellow);}
+.node-label{ display:block; font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 8px 24px; }
+.node-card h3{ font-family:var(--font-display); font-weight:700; font-size:23px; margin:0 0 10px 24px; line-height:1.25; }
+.node-card p{ font-size:20px; line-height:1.45; margin:0 24px 0 24px; color:#3a352c; }
+.drag-handles{ position:absolute; top:50%; right:14px; transform:translateY(-50%); color:rgba(26,26,26,.25); font-size:20px; letter-spacing:2px; font-weight:700; }
+
+.card-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:26px; }
+.card-grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+
+/* bullet list */
+ul.bullet-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:20px; }
+ul.bullet-list li{ font-size:27px; line-height:1.45; padding-left:42px; position:relative; }
+ul.bullet-list li::before{ content:''; position:absolute; left:0; top:9px; width:15px; height:15px; border-radius:50%; background:var(--orange); }
+ul.bullet-list li:nth-child(even)::before{ background:var(--teal); }
+ul.bullet-list li strong{font-weight:500;}
+
+/* connector / trigger-action pulse (easter egg) */
+.ta-row{ display:flex; align-items:center; gap:0; }
+.ta-node{ width:420px; }
+.ta-node .node-card{ padding:22px 24px 20px 30px; }
+.ta-connector{ width:200px; height:70px; flex:0 0 auto; margin:0 -6px; position:relative; }
+.pulse-path{ animation: pulseDash 1.1s linear infinite; }
+@keyframes pulseDash{ to{ stroke-dashoffset:-32; } }
+.plug-anim{ animation: plugSnap 2.6s ease-in-out infinite; }
+@keyframes plugSnap{
+  0%{ transform:translateX(-40px); }
+  30%{ transform:translateX(-40px); }
+  52%{ transform:translateX(3px); }
+  58%{ transform:translateX(-5px); }
+  64%{ transform:translateX(0px); }
+  100%{ transform:translateX(0px); }
+}
+
+/* table */
+table.compare{ width:100%; border-collapse:collapse; font-size:21px; }
+table.compare th{ font-family:var(--font-display); font-weight:700; text-align:left; padding:12px 16px; border-bottom:3px solid var(--ink); }
+table.compare td{ padding:12px 16px; border-bottom:1px solid rgba(26,26,26,.15); vertical-align:top; }
+table.compare tr:nth-child(odd) td{ background:rgba(255,209,102,.16); }
+table.compare td:first-child, table.compare th:first-child{ font-weight:600; width:24%; }
+
+/* code block */
+.code-block{ background:#1a1a1a; color:#f5f0e6; font-family:'SFMono-Regular',Consolas,Menlo,monospace; font-size:19px; line-height:1.65; border-radius:16px; padding:26px 30px; }
+.code-block .k{color:#FFD166;} .code-block .s{color:#7EE787;} .code-block .c{color:#9aa0a6;} .code-block .m{color:#0EA5A0;}
+
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:36px; flex:1; }
+.pill{ display:inline-block; font-family:var(--font-display); font-weight:700; font-size:14px; letter-spacing:.08em; text-transform:uppercase; background:var(--yellow); color:var(--ink); padding:6px 14px; border-radius:999px; border:2px solid var(--ink); }
+
+.title-slide .slide-title{ font-size:96px; max-width:1650px; }
+.title-slide .brand-row{ display:flex; align-items:center; gap:16px; margin-bottom:36px; }
+.title-slide .brand-dot{ width:20px;height:20px;border-radius:50%; background:var(--orange); box-shadow: 26px 0 0 var(--teal), 52px 0 0 var(--yellow); }
+.footer-chrome{ margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; }
+.footer-chrome .theme-tag{ font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--muted); }
+.recap-list li::before{ background:var(--teal); }
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- SLIDE 1: TITLE -->
+    <section class="slide title-slide">
+      <div class="slide-inner">
+        <div class="brand-row">
+          <span class="brand-dot"></span>
+          <span class="kicker" data-editable style="margin:0;">Week 3 · Class 1 · The Workflow Canvas</span>
+        </div>
+        <h1 class="slide-title" data-editable>ChatGPT &amp; Claude<br>as Workflow Engines</h1>
+        <p class="slide-sub" data-editable>Turning a chat window into a repeatable, reliable way of working — chat workflows, Projects &amp; Canvases, prompt libraries, and choosing the right engine for the job.</p>
+        <div class="footer-chrome">
+          <span class="theme-tag" data-editable>No-Code &amp; Low-Code AI Builders</span>
+          <span class="pill">Trigger → Action</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: AGENDA + EASTER EGG -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Today's Map</div>
+        <h1 class="slide-title" data-editable>Today's Workflow</h1>
+        <ul class="bullet-list" style="margin-bottom:40px;">
+          <li data-editable><strong>Chat as a trigger → action loop</strong> — why every message you send is already a workflow step</li>
+          <li data-editable><strong>Projects &amp; Canvases</strong> — giving a chat a real workspace instead of a scattered thread</li>
+          <li data-editable><strong>Prompt libraries</strong> — reusable templates instead of reinventing prompts</li>
+          <li data-editable><strong>ChatGPT vs Claude</strong> — comparing the two engines so you pick the right one</li>
+        </ul>
+        <div class="ta-row" style="margin-top:auto;">
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">Trigger</span>
+              <h3 data-editable>You send a message</h3>
+              <p data-editable>Any prompt typed into ChatGPT or Claude</p>
+            </div>
+          </div>
+          <div class="ta-connector">
+            <svg width="200" height="70" viewBox="0 0 200 70">
+              <defs>
+                <marker id="arrow1" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#FF6B35"></path>
+                </marker>
+              </defs>
+              <path d="M6 35 H176" stroke="#FF6B35" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#arrow1)" class="pulse-path"></path>
+            </svg>
+          </div>
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Action</span>
+              <h3 data-editable>Model replies &amp; updates context</h3>
+              <p data-editable>The reply becomes context for your next trigger</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: CONCEPT - Chat is already a workflow engine -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Chat Is Already a Workflow Engine</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:30px;">Every message you send is a <strong>trigger</strong>. Every reply is an <strong>action</strong> whose output becomes the context for your next trigger. Seeing chat this way lets you design multi-turn tasks instead of firing off one-off questions.</p>
+        <div class="ta-row" style="margin-top:14px;">
+          <div class="ta-node" style="width:390px;">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">Trigger</span>
+              <h3 data-editable>"Outline a blog post"</h3>
+            </div>
+          </div>
+          <div class="ta-connector" style="width:140px;">
+            <svg width="140" height="70" viewBox="0 0 140 70"><defs><marker id="a2" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0EA5A0"></path></marker></defs><path d="M6 35 H116" stroke="#0EA5A0" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a2)" class="pulse-path"></path></svg>
+          </div>
+          <div class="ta-node" style="width:390px;">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Action</span>
+              <h3 data-editable>Model drafts an outline</h3>
+            </div>
+          </div>
+          <div class="ta-connector" style="width:140px;">
+            <svg width="140" height="70" viewBox="0 0 140 70"><defs><marker id="a3" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#FFD166"></path></marker></defs><path d="M6 35 H116" stroke="#FFD166" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a3)" class="pulse-path"></path></svg>
+          </div>
+          <div class="ta-node" style="width:390px;">
+            <div class="node-card">
+              <div class="node-dot info"></div>
+              <span class="node-label">New Trigger</span>
+              <h3 data-editable>"Now write section 2"</h3>
+            </div>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:34px;">Example: a blog post built over five turns — outline → draft → tone edit → shorten → title options — each step building on the last reply.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: CONCEPT - ChatGPT Projects -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>ChatGPT Projects: A Workspace, Not Just a Thread</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:28px;">A <strong>Project</strong> groups related chats, files, and instructions together so context doesn't get lost or repeated across separate conversations.</p>
+        <div class="card-grid">
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Holds</span>
+            <h3 data-editable>Project files</h3>
+            <p data-editable>Reference docs the model can read across every chat in the project</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Sets</span>
+            <h3 data-editable>Project instructions</h3>
+            <p data-editable>Standing rules — tone, format, constraints — applied automatically</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Organizes</span>
+            <h3 data-editable>Chat history</h3>
+            <p data-editable>Every conversation for this topic lives in one place, not scattered</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot info"></div>
+            <span class="node-label">Shares</span>
+            <h3 data-editable>Context across chats</h3>
+            <p data-editable>Start a new chat and it already "knows" the project's files and rules</p>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:26px;">Example: a "Client X" project holding the brand-voice doc plus every marketing chat for that client.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: CONCEPT - Claude Projects/Artifacts vs ChatGPT Canvas -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker teal" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Canvases &amp; Artifacts: A Surface Beside the Chat</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:26px;">A <strong>Project</strong> stores context; a <strong>Canvas/Artifact</strong> is a separate editing surface for content you'll revise many times — instead of re-pasting a whole document into the chat each round.</p>
+        <div class="two-col">
+          <div class="node-card">
+            <div class="node-dot trigger"></div>
+            <span class="node-label">Claude</span>
+            <h3 data-editable>Projects + Artifacts</h3>
+            <p data-editable><strong>Projects</strong> hold persistent knowledge and custom instructions across chats. <strong>Artifacts</strong> open a live document or code pane next to the conversation that you keep editing and referencing.</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot action"></div>
+            <span class="node-label">ChatGPT</span>
+            <h3 data-editable>Projects + Canvas</h3>
+            <p data-editable><strong>Projects</strong> group chats, files and instructions. <strong>Canvas</strong> gives you a document/code pane for collaborative editing — comment, revise, and iterate without losing the working copy in scrollback.</p>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:26px;">Rule of thumb: use a canvas/artifact for anything you'll edit more than twice — essays, specs, code — not the chat log itself.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: CONCEPT - Prompt libraries -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>Prompt Libraries: Reusable, Not Reinvented</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:28px;">A <strong>prompt library</strong> is a saved, reusable set of prompt templates for recurring tasks — so you and your team stop rewriting the same instructions from scratch.</p>
+        <div class="card-grid">
+          <div class="node-card">
+            <div class="node-dot trigger"></div>
+            <span class="node-label">Building Block</span>
+            <h3 data-editable>Template with placeholders</h3>
+            <p data-editable>e.g. "Summarize [transcript] into 3 action items for [audience]"</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot trigger"></div>
+            <span class="node-label">Building Block</span>
+            <h3 data-editable>Style &amp; tone baked in</h3>
+            <p data-editable>Voice and formatting rules live in the template, not your memory</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot action"></div>
+            <span class="node-label">Stored In</span>
+            <h3 data-editable>Projects &amp; instructions</h3>
+            <p data-editable>Saved inside a Project so every relevant chat can use it</p>
+          </div>
+          <div class="node-card">
+            <div class="node-dot action"></div>
+            <span class="node-label">Payoff</span>
+            <h3 data-editable>Shared across a team</h3>
+            <p data-editable>Consistency and faster onboarding — new hires reuse what works</p>
+          </div>
+        </div>
+        <p class="slide-sub" data-editable style="margin-top:24px;">Example: a "meeting notes → action items" template every team member runs the same way.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: CONCEPT - ChatGPT vs Claude table -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Concept</div>
+        <h1 class="slide-title" data-editable>ChatGPT vs Claude: Two Workflow Engines</h1>
+        <table class="compare" data-editable>
+          <tr><th>Feature</th><th>ChatGPT</th><th>Claude</th></tr>
+          <tr><td>Persistent workspace</td><td>Projects</td><td>Projects</td></tr>
+          <tr><td>Editable doc/code pane</td><td>Canvas</td><td>Artifacts</td></tr>
+          <tr><td>Reusable custom persona</td><td>Custom GPTs (GPT store)</td><td>Project-level instructions</td></tr>
+          <tr><td>Long documents</td><td>Strong, model-dependent limits</td><td>Known for very large context, careful reading</td></tr>
+          <tr><td>Style</td><td>Broad plugin/action ecosystem</td><td>Cautious, structured reasoning</td></tr>
+        </table>
+        <p class="slide-sub" data-editable style="margin-top:28px;">Neither engine is "better" in every case — the right choice depends on the task, not brand loyalty.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: DEMO WALKTHROUGH -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Demo Walkthrough</div>
+        <h1 class="slide-title" data-editable>From the Chat Box to the API</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:22px;">The notebook recreates the same trigger → action idea manually in Python, calling the OpenAI and Anthropic SDKs directly instead of clicking in a chat UI. Seeing the raw call demystifies what the chat window is doing behind the scenes.</p>
+        <div class="code-block" data-editable>
+<span class="c"># the same "trigger" you'd type into ChatGPT, sent via code</span><br>
+response = client.chat.completions.create(<br>
+&nbsp;&nbsp;model=<span class="s">"gpt-4o-mini"</span>,<br>
+&nbsp;&nbsp;messages=[<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<span class="k">"role"</span>: <span class="s">"system"</span>, <span class="k">"content"</span>: <span class="s">"You are a concise writing coach."</span>},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{<span class="k">"role"</span>: <span class="s">"user"</span>, <span class="k">"content"</span>: <span class="s">"Outline a blog post about no-code AI."</span>}<br>
+&nbsp;&nbsp;]<br>
+)</div>
+        <p class="slide-sub" data-editable style="margin-top:22px;">Same idea, same roles (system / user / assistant) — just written instead of clicked. The notebook runs this against both providers so you can compare tone and structure side by side.</p>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: COMMON PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Common Pitfalls</div>
+        <h1 class="slide-title" data-editable>Where Chat Workflows Go Wrong</h1>
+        <ul class="bullet-list">
+          <li data-editable><strong>Chat memory ≠ permanent memory</strong> — context is scoped to a project/session, not universal recall</li>
+          <li data-editable><strong>Re-typing instructions every time</strong> instead of saving a template in a prompt library</li>
+          <li data-editable><strong>Treating every reply as final</strong> instead of iterating in a canvas or artifact</li>
+          <li data-editable><strong>Mixing unrelated topics in one thread</strong> — context gets messy, slower, and more expensive</li>
+          <li data-editable><strong>Assuming ChatGPT and Claude behave identically</strong> — they have different strengths for different tasks</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Hands-On</div>
+        <h1 class="slide-title" data-editable>Challenge Preview</h1>
+        <p class="slide-sub" data-editable style="margin-bottom:24px;">Full exercises and starter code live in <strong>class-1.ipynb</strong>. A preview of what you'll build:</p>
+        <div class="card-grid">
+          <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">01</span><h3 data-editable>Build a 3-turn workflow chain</h3></div>
+          <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">02</span><h3 data-editable>Design a prompt-library template</h3></div>
+          <div class="node-card"><div class="node-dot action"></div><span class="node-label">03</span><h3 data-editable>Call both APIs and compare answers</h3></div>
+          <div class="node-card"><div class="node-dot action"></div><span class="node-label">04</span><h3 data-editable>Write Project instructions for a real use case</h3></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: RECAP -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Recap</div>
+        <h1 class="slide-title" data-editable>Key Takeaways</h1>
+        <ul class="bullet-list recap-list">
+          <li data-editable>Chat is a loop: <strong>your message (trigger) → the reply (action) → new context</strong>, repeat</li>
+          <li data-editable>Projects and Canvases/Artifacts give chat a persistent, organized workspace</li>
+          <li data-editable>Prompt libraries turn one-off prompts into repeatable, shareable assets</li>
+          <li data-editable>ChatGPT and Claude are both workflow engines, not identical twins — pick based on the task</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: NEXT CLASS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="kicker" data-editable>Next Class</div>
+        <h1 class="slide-title" data-editable>Custom GPTs &amp; Assistants</h1>
+        <p class="slide-sub" data-editable style="max-width:1100px;">We'll package instructions, knowledge files, and actions/tools into a reusable custom GPT or Assistant that anyone can call on demand — no more re-explaining yourself every session.</p>
+        <div class="ta-row" style="margin-top:auto;">
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot trigger"></div>
+              <span class="node-label">Trigger</span>
+              <h3 data-editable>User asks the GPT a question</h3>
+            </div>
+          </div>
+          <div class="ta-connector">
+            <svg width="200" height="70" viewBox="0 0 200 70"><defs><marker id="a4" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0EA5A0"></path></marker></defs><path d="M6 35 H176" stroke="#0EA5A0" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#a4)" class="pulse-path"></path></svg>
+          </div>
+          <div class="ta-node">
+            <div class="node-card">
+              <div class="node-dot action"></div>
+              <span class="node-label">Action</span>
+              <h3 data-editable>GPT calls a knowledge file or tool</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<div class="deck-controls">
+  <span>GenAI Foundations / Week 3 / Class 1</span>
+  <span class="sep">·</span>
+  <a href="../index.html">Course</a>
+  <span class="sep">·</span>
+  <a href="index.html">Week 3</a>
+  <span class="sep">·</span>
+  <span class="counter" id="slideCounter">01 / 12</span>
+</div>
+<a class="nav-btn nav-prev" href="index.html">← Week 3</a>
+<a class="nav-btn nav-next" href="class-2.html">Class 2 →</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

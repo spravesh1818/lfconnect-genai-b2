@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 1 — Why Retrieval-Augmented Generation? | GenAI Foundations</title>
+<meta name="description" content="Week 6, Class 1: the limits of parametric knowledge, grounding, and the RAG architecture overview.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Source+Sans+3:wght@400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 6 THEME — THE CARD CATALOG / STACKS
+   =========================================== */
+:root{
+  --bg:#F1E7D0;
+  --forest:#2F5233;
+  --brass:#B08D57;
+  --ink:#2B1D14;
+  --card:#FBF4E2;
+  --wrong:#8A2E2E;
+  --stage-bg: var(--forest);
+  --slide-bg: var(--bg);
+  --font-display:'Libre Caslon Display', serif;
+  --font-body:'Source Sans 3', sans-serif;
+  --font-mono:'Courier Prime', monospace;
+}
+*{box-sizing:border-box;}
+body{ font-family:var(--font-body); }
+.slide{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background-color:var(--bg);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 63px, rgba(176,141,87,.18) 63px, rgba(176,141,87,.18) 64px);
+}
+
+/* card-catalog frame chrome, present on every slide */
+.card-edge{ position:absolute; inset:40px; border:3px solid var(--ink); pointer-events:none; z-index:2; box-shadow: inset 0 0 0 1px rgba(43,29,20,.10); }
+.punch{ position:absolute; top:25px; width:30px; height:30px; border-radius:50%; background:var(--ink); z-index:3; box-shadow: inset 0 2px 3px rgba(0,0,0,.55), 0 0 0 4px var(--bg), 0 0 0 6px var(--brass); }
+.punch.l{ left:calc(50% - 130px); }
+.punch.r{ left:calc(50% + 100px); }
+.tab{ position:absolute; top:8px; right:96px; background:var(--brass); color:var(--ink); font-family:var(--font-mono); font-weight:700; font-size:19px; letter-spacing:.05em; padding:9px 20px 10px; border:2px solid var(--ink); border-bottom:none; z-index:4; }
+.stamp{ position:absolute; right:96px; bottom:66px; width:230px; padding:14px 8px; border:4px double var(--forest); border-radius:10px; text-align:center; transform:rotate(-11deg); color:var(--forest); font-family:var(--font-mono); font-weight:700; letter-spacing:.14em; font-size:19px; opacity:.30; z-index:3; pointer-events:none; text-transform:uppercase; line-height:1.5;}
+
+/* content layout */
+.content{ position:absolute; left:132px; right:132px; top:150px; bottom:96px; z-index:4; display:flex; flex-direction:column; }
+.kicker{ font-family:var(--font-mono); font-size:21px; letter-spacing:.24em; text-transform:uppercase; color:var(--forest); margin-bottom:16px; font-weight:700; }
+.slide-title{ font-family:var(--font-display); font-size:60px; color:var(--ink); line-height:1.16; margin-bottom:6px; }
+.slide-sub{ font-family:var(--font-body); font-size:25px; color:var(--forest); font-weight:600; margin-bottom:8px; }
+.rule{ width:120px; height:3px; background:var(--brass); margin:22px 0 30px; }
+
+/* bullets */
+.bullets{ list-style:none; display:flex; flex-direction:column; gap:20px; }
+.bullets li{ font-size:31px; line-height:1.48; padding-left:44px; position:relative; }
+.bullets li::before{ content:"◆"; position:absolute; left:0; top:3px; color:var(--brass); font-size:22px; }
+.bullets.small li{ font-size:26px; }
+
+/* card grids */
+.card-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:26px; }
+.card-grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+.card{ background:rgba(255,255,255,.4); border:2px solid var(--forest); border-radius:6px; padding:26px 30px; }
+.card h3{ font-family:var(--font-display); font-size:30px; color:var(--forest); margin:0 0 14px; }
+.card ul{ list-style:none; display:flex; flex-direction:column; gap:10px; }
+.card ul li{ font-size:22px; line-height:1.4; padding-left:26px; position:relative; }
+.card ul li::before{ content:"–"; position:absolute; left:0; color:var(--brass); }
+.card p{ font-size:22px; line-height:1.45; }
+
+/* pipeline diagram */
+.pipeline{ display:flex; flex-direction:column; gap:18px; }
+.pipeline-row{ display:flex; align-items:center; gap:14px; }
+.pipeline-label{ font-family:var(--font-mono); font-weight:700; font-size:19px; color:var(--bg); background:var(--ink); padding:10px 16px; border-radius:4px; width:150px; text-align:center; letter-spacing:.05em; }
+.pipeline-step{ background:var(--forest); color:var(--bg); font-family:var(--font-mono); font-weight:700; font-size:20px; padding:18px 16px; border-radius:6px; text-align:center; flex:1; }
+.pipeline-arrow{ font-size:28px; color:var(--brass); flex:0 0 auto; }
+.pipeline-caption{ font-size:22px; margin-top:8px; color:var(--ink); }
+
+/* compare / demo cards */
+.compare-grid{ display:grid; grid-template-columns:1fr 1fr; gap:34px; flex:1; }
+.compare-card{ border:2px dashed var(--brass); border-radius:8px; padding:26px 28px; background:rgba(255,255,255,.42); display:flex; flex-direction:column; }
+.compare-card h4{ font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.06em; font-size:20px; color:var(--forest); margin:0 0 16px; }
+.compare-card .qa{ font-size:22px; line-height:1.5; margin-bottom:12px; }
+.compare-card .label{ font-weight:700; color:var(--ink); }
+.compare-card .answer{ font-style:italic; }
+.compare-card .answer.wrong{ color:var(--wrong); }
+.compare-card .answer.right{ color:var(--forest); }
+.compare-caption{ text-align:center; font-size:22px; font-style:italic; color:var(--ink); margin-top:20px; }
+
+/* two column with graphic */
+.two-col{ display:flex; gap:56px; align-items:center; flex:1; }
+.two-col .text-side{ flex:1.15; }
+.two-col .graphic-side{ flex:1; display:flex; align-items:center; justify-content:center; }
+.vector-scatter{ width:100%; max-width:520px; height:auto; }
+
+/* title slide */
+.title-slide .content{ justify-content:center; align-items:flex-start; top:0; bottom:0; }
+.catalog-meta{ margin-top:38px; font-family:var(--font-mono); font-size:20px; color:var(--forest); border-top:2px solid var(--brass); border-bottom:2px solid var(--brass); padding:16px 0; letter-spacing:.02em; }
+.catalog-meta div{ margin:4px 0; }
+.title-big{ font-family:var(--font-display); font-size:96px; line-height:1.1; color:var(--ink); max-width:1500px; }
+.title-kicker{ font-family:var(--font-mono); font-size:24px; letter-spacing:.3em; text-transform:uppercase; color:var(--forest); margin-bottom:26px; font-weight:700; }
+
+/* agenda */
+.agenda-list{ list-style:none; display:flex; flex-direction:column; gap:22px; counter-reset:agenda; }
+.agenda-list li{ counter-increment:agenda; font-size:33px; display:flex; align-items:baseline; gap:22px; padding:14px 22px; background:rgba(255,255,255,.35); border-left:5px solid var(--brass); border-radius:2px; }
+.agenda-list li::before{ content:counter(agenda,decimal-leading-zero); font-family:var(--font-mono); font-weight:700; color:var(--forest); font-size:26px; }
+
+/* pitfalls grid */
+.pitfall-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:22px; }
+.pitfall{ background:rgba(255,255,255,.4); border:2px solid var(--ink); border-radius:6px; padding:20px 24px; }
+.pitfall h4{ font-family:var(--font-mono); font-size:20px; color:var(--wrong); text-transform:uppercase; letter-spacing:.03em; margin:0 0 8px; }
+.pitfall p{ font-size:21px; line-height:1.4; margin:0; }
+
+/* challenge preview */
+.challenge-list{ list-style:none; display:flex; flex-direction:column; gap:16px; }
+.challenge-list li{ font-size:27px; padding:12px 20px; border:1px solid var(--brass); border-radius:4px; background:rgba(255,255,255,.3); }
+.challenge-list .num{ font-family:var(--font-mono); color:var(--forest); font-weight:700; margin-right:14px; }
+
+/* next class */
+.next-box{ margin-top:30px; padding:28px 34px; border:3px solid var(--forest); border-radius:8px; background:rgba(255,255,255,.4); max-width:1300px; }
+.next-box p{ font-size:26px; line-height:1.5; }
+.next-callno{ font-family:var(--font-mono); font-size:20px; color:var(--brass); margin-top:16px; letter-spacing:.05em; }
+
+/* fixed chrome outside stage */
+.top-links{ position:fixed; top:18px; right:22px; z-index:1000; display:flex; gap:12px; }
+.top-links a{ font-family:var(--font-mono); font-size:14px; color:var(--bg); background:var(--forest); padding:9px 16px; border-radius:4px; text-decoration:none; letter-spacing:.04em; border:1px solid var(--brass); }
+.deck-controls-inner{ display:flex; align-items:center; gap:18px; background:var(--ink); color:var(--bg); font-family:var(--font-mono); font-size:15px; padding:10px 24px; border-radius:30px; letter-spacing:.04em; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+#slideCounter{ font-weight:700; color:var(--brass); }
+.breadcrumb{ opacity:.85; }
+.nav-btn{ position:fixed; bottom:24px; z-index:1000; font-family:var(--font-mono); font-size:15px; text-decoration:none; background:var(--forest); color:var(--bg); padding:12px 20px; border-radius:6px; letter-spacing:.03em; box-shadow:0 3px 0 rgba(0,0,0,.25); border:1px solid var(--brass); }
+.nav-btn.prev{ left:24px; } .nav-btn.next{ right:24px; }
+
+/* inline editing */
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed var(--forest); outline-offset: 4px; }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- 1: TITLE -->
+    <section class="slide title-slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="title-kicker" data-editable>Week 6 · The Card Catalog</div>
+        <h1 class="title-big" data-editable>Why Retrieval-<br>Augmented Generation?</h1>
+        <div class="catalog-meta">
+          <div data-editable>CALL NO. &nbsp;RAG 006.3 — CLASS 1 OF 3</div>
+          <div data-editable>SUBJECT &nbsp;Grounding Language Models in Real Documents</div>
+          <div data-editable>STATUS &nbsp;Available for Check-Out</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2: AGENDA -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Today's Call Slip</div>
+        <h2 class="slide-title" data-editable>What We're Checking Out Today</h2>
+        <div class="rule"></div>
+        <ol class="agenda-list">
+          <li data-editable>The knowledge-cutoff problem</li>
+          <li data-editable>Parametric vs. retrieved knowledge</li>
+          <li data-editable>Grounding: giving the model something to read</li>
+          <li data-editable>RAG architecture, end to end</li>
+          <li data-editable>Demo: ask it something it can't know</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 3: CONCEPT — Knowledge Cutoff -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>The Knowledge-Cutoff Problem</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable>Every LLM is trained on a snapshot of text collected up to a certain date — its <em>training cutoff</em>.</li>
+          <li data-editable>After that date, the model has never seen a single new word about the world.</li>
+          <li data-editable>Ask it about last week's news, this morning's price, or your company's internal wiki — it has nothing to draw on.</li>
+          <li data-editable>It doesn't know that it doesn't know, and will often guess fluently and confidently anyway.</li>
+          <li data-editable>That confident guessing is <strong>hallucination</strong>: a plausible answer with no grounding in fact.</li>
+          <li data-editable>The fix isn't a smarter model — it's giving the model something real to read before it answers.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4: CONCEPT — Parametric vs Retrieved -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Parametric vs. Retrieved Knowledge</h2>
+        <div class="rule"></div>
+        <div class="card-grid">
+          <div class="card">
+            <h3 data-editable>Parametric Knowledge</h3>
+            <ul>
+              <li data-editable>Baked into the model's weights during training</li>
+              <li data-editable>Broad, but frozen at the training cutoff</li>
+              <li data-editable>Can't be updated without expensive retraining</li>
+              <li data-editable>Prone to blending facts together — hallucination</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 data-editable>Retrieved Knowledge</h3>
+            <ul>
+              <li data-editable>Lives in documents outside the model entirely</li>
+              <li data-editable>Updated any time — just edit a file</li>
+              <li data-editable>Specific to your data: your docs, your product</li>
+              <li data-editable>The model reads it fresh on every single request</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5: CONCEPT — Grounding -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>Grounding: Give It Something to Read</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable><strong>Grounding</strong> means supplying real source text in the prompt so the model answers from what's in front of it, not from memory.</li>
+          <li data-editable>Simplest form: paste the relevant paragraph directly into your prompt, then ask the question.</li>
+          <li data-editable>This already works today — no vector database required for a handful of documents.</li>
+          <li data-editable>The catch: it doesn't scale. You can't paste ten thousand pages into every prompt.</li>
+          <li data-editable>That scaling problem is exactly what Retrieval-Augmented Generation automates.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6: CONCEPT — RAG Architecture -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>RAG Architecture, End to End</h2>
+        <div class="rule"></div>
+        <div class="pipeline">
+          <div class="pipeline-row">
+            <div class="pipeline-label" data-editable>INDEXING</div>
+            <div class="pipeline-step" data-editable>Documents</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Chunk</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Embed</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Vector Store</div>
+          </div>
+          <div class="pipeline-row">
+            <div class="pipeline-label" data-editable>QUERY TIME</div>
+            <div class="pipeline-step" data-editable>Question</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Embed</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Retrieve Top-k</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>Augmented Prompt</div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" data-editable>LLM → Answer</div>
+          </div>
+        </div>
+        <p class="pipeline-caption" data-editable>Indexing happens once (or whenever documents change). Retrieval and generation happen on every question.</p>
+      </div>
+    </section>
+
+    <!-- 7: CONCEPT — RAG vs Fine-tuning -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Concept</div>
+        <h2 class="slide-title" data-editable>RAG vs. Fine-Tuning</h2>
+        <div class="rule"></div>
+        <div class="card-grid">
+          <div class="card">
+            <h3 data-editable>Retrieval-Augmented Generation</h3>
+            <ul>
+              <li data-editable>Adds an "open book" at question time</li>
+              <li data-editable>Updatable in seconds — swap a document</li>
+              <li data-editable>Can point back to its sources</li>
+              <li data-editable>Best for facts, policies, and documents</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 data-editable>Fine-Tuning</h3>
+            <ul>
+              <li data-editable>Re-trains the model's own weights</li>
+              <li data-editable>Slow and costly to update</li>
+              <li data-editable>No built-in citations</li>
+              <li data-editable>Best for tone, style, and behavior</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:23px; margin-top:22px;" data-editable>Many production systems use both: fine-tune for voice, RAG for facts.</p>
+      </div>
+    </section>
+
+    <!-- 8: DEMO -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>From the Notebook</div>
+        <h2 class="slide-title" data-editable>Ask It, Then Show It the File</h2>
+        <div class="rule"></div>
+        <div class="compare-grid">
+          <div class="compare-card">
+            <h4 data-editable>No Context — Parametric Only</h4>
+            <div class="qa"><span class="label">Prompt:</span> <span data-editable>"What is our office's guest Wi-Fi password policy?"</span></div>
+            <div class="qa answer wrong" data-editable>Model: invents a plausible-sounding policy that isn't real.</div>
+          </div>
+          <div class="compare-card">
+            <h4 data-editable>With Context — Grounded</h4>
+            <div class="qa"><span class="label">Prompt:</span> <span data-editable>[pasted policy paragraph] + "What is our office's guest Wi-Fi password policy?"</span></div>
+            <div class="qa answer right" data-editable>Model: correctly quotes the real policy from the pasted text.</div>
+          </div>
+        </div>
+        <p class="compare-caption" data-editable>Same model, same question — the only thing that changed is what it was allowed to read.</p>
+      </div>
+    </section>
+
+    <!-- 9: PITFALLS -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Common Pitfalls</div>
+        <h2 class="slide-title" data-editable>Misconceptions Worth Correcting</h2>
+        <div class="rule"></div>
+        <div class="pitfall-grid">
+          <div class="pitfall"><h4 data-editable>Not Live Internet Access</h4><p data-editable>RAG only retrieves from documents you've actually given it — nothing more.</p></div>
+          <div class="pitfall"><h4 data-editable>More Context Isn't Always Better</h4><p data-editable>Irrelevant text dilutes the model's focus and can crowd out the right answer.</p></div>
+          <div class="pitfall"><h4 data-editable>A Bad Retriever Looks Like a Bad Model</h4><p data-editable>If retrieval finds the wrong chunk, generation fails too — even with a great model.</p></div>
+          <div class="pitfall"><h4 data-editable>Garbage In, Garbage Out</h4><p data-editable>Messy, outdated, or duplicated source documents poison every answer downstream.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10: CHALLENGE PREVIEW -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Hands-On</div>
+        <h2 class="slide-title" data-editable>This Week's Challenge Cards</h2>
+        <div class="rule"></div>
+        <ol class="challenge-list">
+          <li data-editable><span class="num">01</span>Catch the model confidently guessing wrong</li>
+          <li data-editable><span class="num">02</span>Write your own grounding paragraph</li>
+          <li data-editable><span class="num">03</span>Compare ungrounded vs. grounded answers side by side</li>
+          <li data-editable><span class="num">04</span>Diagram the RAG pipeline in your own words</li>
+          <li data-editable><span class="num">05</span>Bonus: spot which failure mode a broken answer shows</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 11: RECAP -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.1</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Recap</div>
+        <h2 class="slide-title" data-editable>Key Takeaways</h2>
+        <div class="rule"></div>
+        <ul class="bullets">
+          <li data-editable>LLMs only know what was in their training data — they have a knowledge cutoff.</li>
+          <li data-editable>Parametric knowledge is frozen; retrieved knowledge is fresh and updatable.</li>
+          <li data-editable>Grounding means handing the model real text before asking it a question.</li>
+          <li data-editable>RAG automates grounding at scale: chunk, embed, store, retrieve, generate.</li>
+          <li data-editable>RAG and fine-tuning solve different problems — facts vs. behavior.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 12: NEXT CLASS -->
+    <section class="slide">
+      <div class="card-edge"></div>
+      <span class="punch l"></span><span class="punch r"></span>
+      <span class="tab">CARD 6.2</span>
+      <span class="stamp">RAG<br>· 006.3 ·</span>
+      <div class="content">
+        <div class="kicker" data-editable>Next Class</div>
+        <h2 class="slide-title" data-editable>Up Next: Embeddings &amp; Vector Databases</h2>
+        <div class="rule"></div>
+        <div class="next-box">
+          <p data-editable>How do we teach a computer that "puppy" and "dog" mean almost the same thing? Class 2 opens the card catalog's real secret: turning meaning into numbers.</p>
+          <div class="next-callno" data-editable>FILE UNDER — RAG 006.3, CARD 6.2</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="top-links">
+  <a href="index.html">Week 6 Index</a>
+  <a href="../index.html">Course Home</a>
+</div>
+
+<div class="deck-controls">
+  <div class="deck-controls-inner">
+    <span class="breadcrumb" data-editable>GenAI Foundations / Week 6 / Class 1</span>
+    <span id="slideCounter">01 / 12</span>
+  </div>
+</div>
+
+<a class="nav-btn prev" href="index.html">← Week 6 Index</a>
+<a class="nav-btn next" href="class-2.html">Class 2: Embeddings →</a>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+</body>
+</html>

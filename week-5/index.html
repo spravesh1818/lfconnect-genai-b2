@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 5 · Introduction to AI Agents</title>
+<meta name="description" content="Week 5 of Foundations of Generative AI & LLM Applications: what makes an agent an agent, the plan-act-observe loop, and building a simple agent.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b3d63;
+  --cyan:#7fd1ff;
+  --white:#eaf6ff;
+  --orange:#ff8a3d;
+  --font-display:'Big Shoulders Display', sans-serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(rgba(127,209,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.05) 1px, transparent 1px);
+  background-size:240px 240px, 240px 240px, 40px 40px, 40px 40px;
+  color:var(--white);
+  font-family:var(--font-body);
+  min-height:100vh;
+}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.2s!important; } }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:56px 32px 100px; }
+
+.topnav{ display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--cyan); border-bottom:1px solid rgba(127,209,255,.3); padding-bottom:18px; margin-bottom:56px; flex-wrap:wrap; gap:12px; }
+.topnav a{ color:var(--cyan); text-decoration:none; border:1px solid rgba(127,209,255,.4); padding:7px 14px; background:rgba(5,26,44,.5); }
+.topnav a:hover{ border-color:var(--orange); color:var(--orange); }
+
+.hero{ margin-bottom:64px; }
+.hero .kicker{ display:inline-block; font-family:var(--font-mono); font-size:14px; letter-spacing:.22em; text-transform:uppercase; color:var(--orange); border:1px solid var(--orange); padding:8px 16px; margin-bottom:24px; }
+.hero h1{ font-family:var(--font-display); font-weight:900; font-size:clamp(40px,6.5vw,92px); text-transform:uppercase; line-height:1.02; margin-bottom:22px; }
+.hero h1 .accent{ color:var(--cyan); }
+.hero p{ font-size:clamp(16px,1.6vw,21px); max-width:760px; line-height:1.6; opacity:.9; }
+
+.diagram-row{ display:flex; align-items:center; gap:40px; margin:44px 0 64px; flex-wrap:wrap; }
+.diagram-row svg{ flex-shrink:0; overflow:visible; }
+.node-circle{ fill:rgba(11,61,99,.6); stroke:var(--cyan); stroke-width:3; opacity:.55; }
+.node-letter{ font-family:var(--font-display); font-weight:900; font-size:22px; fill:var(--cyan); text-anchor:middle; opacity:.7; }
+.node-caption{ font-family:var(--font-mono); font-size:12px; letter-spacing:.12em; fill:var(--white); text-anchor:middle; opacity:.55; }
+.arc{ fill:none; stroke:var(--cyan); stroke-width:2.5; opacity:.7; stroke-dasharray:7 6; }
+.diagram-note{ font-family:var(--font-mono); font-size:14px; line-height:1.7; color:var(--white); opacity:.75; max-width:420px; }
+.diagram-note b{ color:var(--orange); }
+
+.section-label{ font-family:var(--font-mono); font-size:14px; letter-spacing:.2em; text-transform:uppercase; color:var(--cyan); opacity:.85; margin-bottom:22px; }
+
+.classes{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:24px; margin-bottom:64px; }
+.class-card{ position:relative; background:rgba(234,246,255,.045); border:1px solid rgba(127,209,255,.35); padding:30px 28px; text-decoration:none; color:var(--white); display:flex; flex-direction:column; gap:16px; transition:transform .2s ease, border-color .2s ease; }
+.class-card::before,.class-card::after{ content:""; position:absolute; width:14px; height:14px; border-color:var(--orange); border-style:solid; }
+.class-card::before{ top:-1px; left:-1px; border-width:2px 0 0 2px; }
+.class-card::after{ bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+.class-card:hover{ transform:translateY(-4px); border-color:rgba(255,138,61,.6); }
+.class-card .cnum{ font-family:var(--font-mono); font-size:14px; letter-spacing:.1em; color:var(--orange); text-transform:uppercase; }
+.class-card h3{ font-family:var(--font-display); font-weight:700; font-size:27px; text-transform:uppercase; line-height:1.2; }
+.class-card p{ font-size:16px; line-height:1.55; opacity:.85; }
+.class-card .go{ margin-top:auto; font-family:var(--font-mono); font-size:13px; color:var(--cyan); letter-spacing:.06em; text-transform:uppercase; padding-top:10px; border-top:1px dashed rgba(127,209,255,.25); }
+
+.titleblock-note{ font-family:var(--font-mono); font-size:13px; color:var(--cyan); opacity:.7; border:1px solid rgba(127,209,255,.3); padding:16px 20px; max-width:640px; }
+
+footer{ margin-top:60px; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--cyan); opacity:.6; letter-spacing:.08em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav">
+    <span>DWG SERIES // WK5-INDEX</span>
+    <a href="../index.html">&larr; Back to Course</a>
+  </div>
+
+  <section class="hero">
+    <div class="kicker">Week 5</div>
+    <h1>Introduction to <span class="accent">AI Agents</span></h1>
+    <p>Theme: The Blueprint / Loop Schematic. Three classes moving from "what even is an agent" to a full tool-calling loop to a working, multi-turn agent you build yourself.</p>
+  </section>
+
+  <div class="diagram-row">
+    <svg viewBox="0 0 240 240" width="200" height="200" aria-hidden="true">
+      <path class="arc" d="M120,43 A92,92 0 0,1 199.7,181"/>
+      <path class="arc" d="M199.7,181 A92,92 0 0,1 40.3,181"/>
+      <path class="arc" d="M40.3,181 A92,92 0 0,1 120,43"/>
+      <g><circle class="node-circle" cx="120" cy="43" r="22"/><text class="node-letter" x="120" y="50">P</text><text class="node-caption" x="120" y="14">PLAN</text></g>
+      <g><circle class="node-circle" cx="199.7" cy="181" r="22"/><text class="node-letter" x="199.7" y="188">A</text><text class="node-caption" x="199.7" y="222">ACT</text></g>
+      <g><circle class="node-circle" cx="40.3" cy="181" r="22"/><text class="node-letter" x="40.3" y="188">O</text><text class="node-caption" x="40.3" y="222">OBSERVE</text></g>
+    </svg>
+    <p class="diagram-note">The <b>Plan &rarr; Act &rarr; Observe</b> loop is this week's recurring schematic — it evolves as you move through the three classes, from a single highlighted node to the full loop running.</p>
+  </div>
+
+  <div class="section-label">// Select a Class</div>
+  <div class="classes">
+    <a class="class-card" href="class-1.html">
+      <span class="cnum">Class 01</span>
+      <h3>What Makes an Agent an Agent?</h3>
+      <p>Agents vs. single prompts, autonomy as a spectrum, and a first look at the decision-making loop.</p>
+      <span class="go">Open Deck &rarr;</span>
+    </a>
+    <a class="class-card" href="class-2.html">
+      <span class="cnum">Class 02</span>
+      <h3>The Agent Loop — Plan, Act, Observe</h3>
+      <p>Tool and function calling in detail, with a live, runnable function-calling demo.</p>
+      <span class="go">Open Deck &rarr;</span>
+    </a>
+    <a class="class-card" href="class-3.html">
+      <span class="cnum">Class 03</span>
+      <h3>Building a Simple Agent</h3>
+      <p>Memory concepts, framework vs. custom loop, and a hands-on minimal tool-using agent.</p>
+      <span class="go">Open Deck &rarr;</span>
+    </a>
+  </div>
+
+  <div class="titleblock-note">DWG NO. WK5-INDEX &nbsp;&middot;&nbsp; SCALE 1:1 &nbsp;&middot;&nbsp; REV A &nbsp;&middot;&nbsp; 3 SHEETS</div>
+
+  <footer>Foundations of Generative AI &amp; LLM Applications — Week 5</footer>
+</div>
+</body>
+</html>
