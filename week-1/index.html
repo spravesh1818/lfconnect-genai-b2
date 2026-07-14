@@ -57,8 +57,6 @@ h1 span{ color:var(--yellow); }
 .class-num{ font-family:var(--font-display); font-weight:800; font-size:32px; color:var(--blue); flex:0 0 auto; width:52px; }
 .class-body h2{ font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--text); margin-bottom:8px; }
 .class-body p{ font-size:16px; color:var(--muted); line-height:1.5; max-width:640px; }
-.class-arrow{ margin-left:auto; font-family:var(--font-code); color:var(--mint); font-size:14px; flex:0 0 auto; align-self:center; }
-
 .card-actions{ display:flex; gap:10px; margin-left:auto; flex:0 0 auto; align-self:center; }
 .card-actions a{ font-family:var(--font-code); font-size:13px; text-decoration:none; padding:8px 14px; border-radius:6px; border:1px solid var(--line); white-space:nowrap; transition:border-color .2s ease, background .2s ease; }
 .card-actions a.local-link{ color:var(--mint); background:transparent; }
@@ -89,30 +87,39 @@ footer{ position:relative; z-index:1; text-align:center; font-family:var(--font-
 
     <div class="section-label">// Select a Class</div>
     <div class="classes">
-      <a class="class-card" href="class-1.html">
+      <div class="class-card">
         <span class="class-num">01</span>
         <span class="class-body">
           <h2>Python Syntax, Control Flow &amp; Data Structures</h2>
           <p>Variables and types, if/for/while, and the four containers — lists, tuples, dicts, sets — that hold your data.</p>
         </span>
-        <span class="class-arrow">Start →</span>
-      </a>
-      <a class="class-card" href="class-2.html">
+        <span class="card-actions">
+          <a class="local-link" href="class-1.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/class-1.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </span>
+      </div>
+      <div class="class-card">
         <span class="class-num">02</span>
         <span class="class-body">
           <h2>Working with Text, Strings &amp; JSON</h2>
           <p>String methods, f-strings, parsing and generating JSON, and reading/writing files — the format every AI API speaks.</p>
         </span>
-        <span class="class-arrow">Start →</span>
-      </a>
-      <a class="class-card" href="class-3.html">
+        <span class="card-actions">
+          <a class="local-link" href="class-2.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/class-2.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </span>
+      </div>
+      <div class="class-card">
         <span class="class-num">03</span>
         <span class="class-body">
           <h2>Calling APIs &amp; Your First AI Script</h2>
           <p>HTTP and requests basics, environment variables and secrets, and a script that sends a prompt to a real LLM and prints the reply.</p>
         </span>
-        <span class="class-arrow">Start →</span>
-      </a>
+        <span class="card-actions">
+          <a class="local-link" href="class-3.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/class-3.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </span>
+      </div>
     </div>
 
     <div class="section-label">// Assignment</div>
