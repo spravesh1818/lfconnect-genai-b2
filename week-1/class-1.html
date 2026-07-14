@@ -136,6 +136,8 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:23px; backgroun
 .top-nav{ position:fixed; top:18px; right:22px; z-index:1000; display:flex; gap:10px; font-family:var(--font-code); }
 .top-nav a{ color:var(--muted); background:rgba(22,27,34,.9); border:1px solid var(--line); padding:8px 14px; border-radius:6px; font-size:13px; text-decoration:none; letter-spacing:.04em; }
 .top-nav a:hover{ color:var(--mint); border-color:var(--mint); }
+.top-nav a.colab-btn{ color:#0d1117; background:var(--yellow); border-color:var(--yellow); font-weight:700; }
+.top-nav a.colab-btn:hover{ color:#0d1117; background:#ffe066; border-color:#ffe066; }
 
 .deck-controls{ display:flex; align-items:center; gap:18px; background:rgba(13,17,23,.92); border:1px solid var(--line); border-radius:999px; padding:10px 18px; font-family:var(--font-code); }
 .deck-controls .breadcrumb{ font-size:13px; color:var(--muted); letter-spacing:.03em; }
@@ -502,6 +504,7 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:23px; backgroun
 <div class="top-nav">
   <a href="../index.html">⌂ Course</a>
   <a href="index.html">Week 1</a>
+  <a class="colab-btn" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/class-1.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
 </div>
 
 <div class="edit-hotzone"></div>

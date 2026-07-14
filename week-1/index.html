@@ -59,6 +59,13 @@ h1 span{ color:var(--yellow); }
 .class-body p{ font-size:16px; color:var(--muted); line-height:1.5; max-width:640px; }
 .class-arrow{ margin-left:auto; font-family:var(--font-code); color:var(--mint); font-size:14px; flex:0 0 auto; align-self:center; }
 
+.card-actions{ display:flex; gap:10px; margin-left:auto; flex:0 0 auto; align-self:center; }
+.card-actions a{ font-family:var(--font-code); font-size:13px; text-decoration:none; padding:8px 14px; border-radius:6px; border:1px solid var(--line); white-space:nowrap; transition:border-color .2s ease, background .2s ease; }
+.card-actions a.local-link{ color:var(--mint); background:transparent; }
+.card-actions a.local-link:hover{ border-color:var(--mint); }
+.card-actions a.colab-link{ color:#0d1117; background:var(--yellow); border-color:var(--yellow); font-weight:700; }
+.card-actions a.colab-link:hover{ background:#ffe066; border-color:#ffe066; }
+
 .readme{ background:#0a0d12; border:1px solid var(--line); border-radius:10px; padding:24px 28px; font-family:var(--font-code); font-size:14px; color:var(--muted); line-height:1.7; }
 .readme .k{ color:var(--blue); }
 .readme .s{ color:var(--mint); }
@@ -108,10 +115,26 @@ footer{ position:relative; z-index:1; text-align:center; font-family:var(--font-
       </a>
     </div>
 
+    <div class="section-label">// Assignment</div>
+    <div class="classes">
+      <div class="class-card">
+        <span class="class-num">HW</span>
+        <span class="class-body">
+          <h2>Putting It All Together</h2>
+          <p>A cumulative notebook — variables to JSON to a real LLM call — plus a capstone ticket-triager that combines everything from Classes 1–3.</p>
+        </span>
+        <span class="card-actions">
+          <a class="local-link" href="assignment.ipynb">Open File →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/assignment.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </span>
+      </div>
+    </div>
+
     <div class="section-label">// Notes</div>
     <div class="readme"><span class="k">class</span> Week1: <span class="s"># "The Interpreter"</span><br>
 &nbsp;&nbsp;classes = <span class="s">3</span><br>
 &nbsp;&nbsp;notebooks = <span class="s">True</span>  <span class="s"># class_1.ipynb .. class_3.ipynb</span><br>
+&nbsp;&nbsp;assignment = <span class="s">"assignment.ipynb"</span>  <span class="s"># capstone: all 3 classes combined</span><br>
 &nbsp;&nbsp;prereqs = <span class="s">None</span>  <span class="s"># beginner friendly</span><br>
 &nbsp;&nbsp;next_week = <span class="s">"Introduction to LLMs"</span></div>
   </div>

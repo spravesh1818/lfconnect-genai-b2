@@ -123,6 +123,8 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:21px; backgroun
 .top-nav{ position:fixed; top:18px; right:22px; z-index:1000; display:flex; gap:10px; font-family:var(--font-code); }
 .top-nav a{ color:var(--muted); background:rgba(22,27,34,.9); border:1px solid var(--line); padding:8px 14px; border-radius:6px; font-size:13px; text-decoration:none; letter-spacing:.04em; }
 .top-nav a:hover{ color:var(--mint); border-color:var(--mint); }
+.top-nav a.colab-btn{ color:#0d1117; background:var(--yellow); border-color:var(--yellow); font-weight:700; }
+.top-nav a.colab-btn:hover{ color:#0d1117; background:#ffe066; border-color:#ffe066; }
 
 .deck-controls{ display:flex; align-items:center; gap:18px; background:rgba(13,17,23,.92); border:1px solid var(--line); border-radius:999px; padding:10px 18px; font-family:var(--font-code); }
 .deck-controls .breadcrumb{ font-size:13px; color:var(--muted); letter-spacing:.03em; }
@@ -221,9 +223,9 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:21px; backgroun
           </ul>
           <div class="code-block" data-editable><span class="kw">import</span> os
 
-<span class="kw">api_key</span> = os.environ.get(<span class="st">"OPENAI_API_KEY"</span>)
+<span class="kw">api_key</span> = os.environ.get(<span class="st">"GROQ_API_KEY"</span>)
 <span class="kw">if</span> <span class="kw">not</span> api_key:
-    <span class="fn">print</span>(<span class="st">"Missing OPENAI_API_KEY — set it first."</span>)</div>
+    <span class="fn">print</span>(<span class="st">"Missing GROQ_API_KEY — set it first."</span>)</div>
         </div>
       </div>
     </section>
@@ -270,13 +272,13 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:21px; backgroun
         <h2 class="slide-title" data-editable>Anatomy of a Chat Completion Request</h2>
         <div class="two-col">
           <ul class="reading-list">
-            <li data-editable><b>Endpoint:</b> a URL like the OpenAI or Anthropic chat/messages endpoint</li>
+            <li data-editable><b>Endpoint:</b> a URL like Groq's OpenAI-compatible chat/completions endpoint</li>
             <li data-editable><b>Headers</b> carry your API key and content type</li>
             <li data-editable><b>Body</b> carries the model name, a list of role-tagged <code>messages</code>, and settings like <code>temperature</code></li>
             <li data-editable>The reply nests the model's text inside the response body — the SDK unwraps it for you</li>
           </ul>
           <div class="code-block" data-editable>{
-  <span class="st">"model"</span>: <span class="st">"gpt-4o-mini"</span>,
+  <span class="st">"model"</span>: <span class="st">"llama-3.3-70b-versatile"</span>,
   <span class="st">"messages"</span>: [
     {<span class="st">"role"</span>: <span class="st">"system"</span>, <span class="st">"content"</span>: <span class="st">"You are concise."</span>},
     {<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: <span class="st">"What is a variable?"</span>}
@@ -307,7 +309,7 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:21px; backgroun
           </ul>
           <div class="code-block" data-editable><span class="kw">try</span>:
     resp = client.chat.completions.create(
-        model=<span class="st">"gpt-4o-mini"</span>, messages=messages, max_tokens=<span class="nm">200</span>
+        model=<span class="st">"llama-3.3-70b-versatile"</span>, messages=messages, max_tokens=<span class="nm">200</span>
     )
     text = resp.choices[<span class="nm">0</span>].message.content
 <span class="kw">except</span> Exception <span class="kw">as</span> e:
@@ -329,15 +331,15 @@ ul.reading-list li code{ font-family:var(--font-code); font-size:21px; backgroun
         <h2 class="slide-title" data-editable>Your First AI Script, End to End</h2>
         <div class="two-col">
           <div class="code-block" data-editable><span class="kw">import</span> os
-<span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+<span class="kw">from</span> groq <span class="kw">import</span> Groq
 
-<span class="kw">api_key</span> = os.environ.get(<span class="st">"OPENAI_API_KEY"</span>)
+<span class="kw">api_key</span> = os.environ.get(<span class="st">"GROQ_API_KEY"</span>)
 <span class="kw">if</span> <span class="kw">not</span> api_key:
-    <span class="kw">raise</span> SystemExit(<span class="st">"Set OPENAI_API_KEY first."</span>)
+    <span class="kw">raise</span> SystemExit(<span class="st">"Set GROQ_API_KEY first."</span>)
 
-<span class="kw">client</span> = OpenAI(api_key=api_key)
+<span class="kw">client</span> = Groq(api_key=api_key)
 <span class="kw">response</span> = client.chat.completions.create(
-    model=<span class="st">"gpt-4o-mini"</span>,
+    model=<span class="st">"llama-3.3-70b-versatile"</span>,
     messages=[{<span class="st">"role"</span>: <span class="st">"user"</span>,
                 <span class="st">"content"</span>: <span class="st">"Explain variables in one sentence."</span>}],
 )
@@ -349,7 +351,7 @@ A variable is a name that
 points to a value stored
 in memory, so you can
 reuse or change it later.</div>
-            <div class="meta-row" data-editable style="margin-top:22px;">Five lines connect an environment variable, an HTTP call, and a printed string. Swap the SDK for anthropic and the shape barely changes.</div>
+            <div class="meta-row" data-editable style="margin-top:22px;">Five lines connect an environment variable, an HTTP call, and a printed string. Groq's SDK mirrors OpenAI's — swap providers and the shape barely changes.</div>
           </div>
         </div>
       </div>
@@ -446,6 +448,7 @@ reuse or change it later.</div>
 <div class="top-nav">
   <a href="../index.html">⌂ Course</a>
   <a href="index.html">Week 1</a>
+  <a class="colab-btn" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-1/class-3.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
 </div>
 
 <div class="edit-hotzone"></div>
@@ -464,6 +467,10 @@ document.querySelectorAll('[data-gutter]').forEach((g)=>{
   for (let i=1;i<=38;i++){ html += String(i).padStart(2,'0') + '<br>'; }
   g.innerHTML = html;
 });
+</script>
+
+<script>
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
 </script>
 
 <script>
@@ -539,7 +546,6 @@ function toggleEdit(){
 editToggle.addEventListener('click', toggleEdit);
 hotzone.addEventListener('click', toggleEdit);
 document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
-(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
 </script>
 </body>
 </html>
