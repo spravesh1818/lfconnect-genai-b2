@@ -71,7 +71,11 @@ body::before{
 .class-body{flex:1;}
 .class-title{font-family:var(--font-display);font-weight:700;font-size:26px;margin-bottom:10px;line-height:1.3;}
 .class-desc{font-size:17px;color:var(--muted);line-height:1.55;max-width:640px;}
-.class-arrow{font-family:var(--font-mono);font-size:14px;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;align-self:center;}
+.class-actions{display:flex;gap:16px;align-items:center;margin-top:20px;flex-wrap:wrap;}
+.class-arrow{font-family:var(--font-mono);font-size:14px;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-decoration:none;border:1px solid rgba(34,211,238,.4);padding:9px 16px;border-radius:8px;transition:color .2s,border-color .2s;}
+.class-arrow:hover{color:var(--text);border-color:var(--cyan);}
+.colab-link{font-family:var(--font-mono);font-size:14px;letter-spacing:.05em;color:var(--bg);background:var(--amber);text-decoration:none;padding:9px 16px;border-radius:8px;font-weight:700;transition:background .2s;}
+.colab-link:hover{background:#ffbf4d;}
 
 .notebook-note{
   background:var(--panel2);border:1px dashed rgba(34,211,238,.35);border-radius:14px;
@@ -95,30 +99,39 @@ footer{margin-top:56px;text-align:center;font-family:var(--font-mono);font-size:
 
   <div class="section-label">// Classes</div>
   <div class="classes">
-    <a class="class-card" href="class-1.html">
+    <div class="class-card">
       <div class="class-num">01</div>
       <div class="class-body">
         <div class="class-title">What Is a Large Language Model?</div>
         <div class="class-desc">Next-token prediction, training at a high level, and the transformer/attention intuition behind modern LLMs.</div>
+        <div class="class-actions">
+          <a class="class-arrow" href="class-1.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-2/class-1.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </div>
       </div>
-      <div class="class-arrow">Start →</div>
-    </a>
-    <a class="class-card" href="class-2.html">
+    </div>
+    <div class="class-card">
       <div class="class-num">02</div>
       <div class="class-body">
         <div class="class-title">Tokens, Temperature &amp; Context Windows</div>
         <div class="class-desc">Tokenization mechanics, temperature and top-p sampling, context window limits, and cost/latency tradeoffs.</div>
+        <div class="class-actions">
+          <a class="class-arrow" href="class-2.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-2/class-2.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </div>
       </div>
-      <div class="class-arrow">Start →</div>
-    </a>
-    <a class="class-card" href="class-3.html">
+    </div>
+    <div class="class-card">
       <div class="class-num">03</div>
       <div class="class-body">
         <div class="class-title">Capabilities, Limitations &amp; Responsible AI</div>
         <div class="class-desc">Hallucination, bias, other failure modes, and practical principles for using LLMs responsibly.</div>
+        <div class="class-actions">
+          <a class="class-arrow" href="class-3.html">Start →</a>
+          <a class="colab-link" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-2/class-3.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+        </div>
       </div>
-      <div class="class-arrow">Start →</div>
-    </a>
+    </div>
   </div>
 
   <div class="notebook-note">
