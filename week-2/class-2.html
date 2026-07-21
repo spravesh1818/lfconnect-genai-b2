@@ -349,7 +349,7 @@ ul.bullets.tight li{font-size:22px;}
         </div>
         <ul class="bullets tight" style="margin-top:30px;">
           <li data-editable>Set top-p to 1.0 and the whole vocabulary's in play; drop it to 0.1 and you're sampling from a narrow, high-confidence shortlist.</li>
-          <li data-editable>Most APIs will let you set both, though in practice teams usually tune one and leave the other at its default.</li>
+          <li data-editable>Most APIs let you set both, though in practice teams usually tune one and leave the other at its default.</li>
         </ul>
       </div>
     </section>
@@ -428,9 +428,9 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
         <h2 class="slide-title" data-editable>Tokens &amp; Sampling Myths</h2>
         <div class="rule"></div>
         <div class="card-grid cols-2">
-          <div class="pit-card"><h3 data-editable>"Temperature 0 is always identical"</h3><p data-editable>It's close to deterministic — though ties and backend nondeterminism can still sneak in tiny variation between calls.</p></div>
-          <div class="pit-card"><h3 data-editable>"Tokens = words"</h3><p data-editable>A token is a sub-word piece, and punctuation, whitespace, and word fragments all count as one too.</p></div>
-          <div class="pit-card"><h3 data-editable>"More context is always better"</h3><p data-editable>A larger context costs more and runs slower, and it still doesn't guarantee the model pays even attention to everything inside it.</p></div>
+          <div class="pit-card"><h3 data-editable>"Temperature 0 is always identical"</h3><p data-editable>Ties and backend nondeterminism can still cause tiny variation between calls, even though it's close to deterministic.</p></div>
+          <div class="pit-card"><h3 data-editable>"Tokens = words"</h3><p data-editable>A token is a sub-word piece — and punctuation, whitespace, and word fragments each use one up too.</p></div>
+          <div class="pit-card"><h3 data-editable>"More context is always better"</h3><p data-editable>A bigger context window doesn't guarantee even attention to everything inside it — and you pay for it too, in cost and speed.</p></div>
           <div class="pit-card"><h3 data-editable>"Higher temperature = smarter answers"</h3><p data-editable>More varied, sure — but not more correct. Higher temperature can just as easily introduce errors.</p></div>
         </div>
       </div>
