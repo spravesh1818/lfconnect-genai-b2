@@ -189,7 +189,7 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner title-slide-inner">
         <div class="class-chip" data-editable>WEEK 2 · THE BLACK BOX / NEURAL SIGNAL · CLASS 2</div>
         <h1 class="mega-title" data-editable>Tokens, Temperature <span class="hl">&amp; Context Windows</span></h1>
-        <p class="deck-sub" data-editable>Every LLM call is measured, priced, and shaped by units you can't see in the chat box: tokens. This class opens that mechanism — tokenization, sampling controls, and the limits of the context window.</p>
+        <p class="deck-sub" data-editable>Every LLM call you make gets measured, priced, and shaped by units you never actually see in the chat window — tokens. This class pulls back that curtain: tokenization, the sampling controls, and where the context window draws its line.</p>
         <div class="theme-strap">GenAI Foundations <span style="opacity:.5">/</span> Week 2: Introduction to LLMs <span style="opacity:.5">/</span> <b>Class 2</b></div>
       </div>
     </section>
@@ -199,15 +199,15 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Today's Map</div>
         <h2 class="slide-title" data-editable>From Text to Tokens to a Bill</h2>
-        <p class="subtitle" data-editable>We'll trace a prompt's entire journey through an LLM API: how it's chopped into tokens, how randomness is dialed in, and where the limits and costs come from.</p>
+        <p class="subtitle" data-editable>We'll trace one prompt's full trip through an LLM API: how it's sliced into tokens, how randomness gets dialed in along the way, and why cost and limits show up at the end.</p>
         <div class="rule"></div>
         <div class="card-grid cols-3">
-          <div class="card"><span class="num">01</span><h3 data-editable>Tokenization Mechanics</h3><p data-editable>How text is broken into the sub-word units models actually process.</p></div>
-          <div class="card cy"><span class="num">02</span><h3 data-editable>Temperature &amp; Top-p</h3><p data-editable>The two dials that control how predictable or surprising output is.</p></div>
-          <div class="card"><span class="num">03</span><h3 data-editable>The Context Window</h3><p data-editable>Why every model has a hard limit on how much text it can "see" at once.</p></div>
-          <div class="card cy"><span class="num">04</span><h3 data-editable>Cost &amp; Latency</h3><p data-editable>Tokens are the meter — more of them means slower and pricier calls.</p></div>
-          <div class="card"><span class="num">05</span><h3 data-editable>Live Demo</h3><p data-editable>Counting real tokens and watching temperature change real output.</p></div>
-          <div class="card cy"><span class="num">06</span><h3 data-editable>Common Pitfalls</h3><p data-editable>Myths about tokens, determinism, and "just add more context."</p></div>
+          <div class="card"><span class="num">01</span><h3 data-editable>Tokenization Mechanics</h3><p data-editable>The sub-word pieces a model actually reads, and how your text gets cut into them.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Temperature &amp; Top-p</h3><p data-editable>Two dials that decide whether output plays it safe or gets surprising.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>The Context Window</h3><p data-editable>Every model can only "see" so much text at once — here's why that ceiling exists.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Cost &amp; Latency</h3><p data-editable>Tokens run the meter: use more of them, and you wait longer and pay more.</p></div>
+          <div class="card"><span class="num">05</span><h3 data-editable>Live Demo</h3><p data-editable>We'll count real tokens, then watch temperature reshape the model's actual output.</p></div>
+          <div class="card cy"><span class="num">06</span><h3 data-editable>Common Pitfalls</h3><p data-editable>A few persistent myths about tokens, determinism, and "just add more context."</p></div>
         </div>
       </div>
     </section>
@@ -217,14 +217,14 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 01</div>
         <h2 class="slide-title" data-editable>What Is a Token?</h2>
-        <p class="subtitle" data-editable>Models don't read letters or whole words — they read <b style="color:var(--cyan)">tokens</b>: sub-word chunks produced by a tokenizer before any prediction happens.</p>
+        <p class="subtitle" data-editable>Before a model predicts anything, a tokenizer has already chopped your text into <b style="color:var(--cyan)">tokens</b> — sub-word chunks, not letters or whole words.</p>
         <div class="rule"></div>
         <div class="two-col">
           <ul class="bullets">
-            <li data-editable>A tokenizer splits text into a fixed vocabulary of common chunks — whole words, word pieces, punctuation, even single characters.</li>
-            <li data-editable>Splitting below the word level lets the model handle rare words, typos, and new languages without an infinite vocabulary.</li>
-            <li data-editable>Common short words are often one token; longer or unusual words split into two or more.</li>
-            <li data-editable>Roughly speaking, 1,000 tokens ≈ 750 English words — but code, non-English text, and numbers tokenize less efficiently.</li>
+            <li data-editable>The tokenizer draws from a fixed vocabulary of common chunks: whole words, word pieces, punctuation, even single characters.</li>
+            <li data-editable>Because it splits below the word level, the model can handle rare words, typos, and new languages — no infinite vocabulary needed.</li>
+            <li data-editable>A short, common word usually fits in a single token; longer or unusual ones split across two or more.</li>
+            <li data-editable>Roughly, 1,000 tokens ≈ 750 English words — though code, non-English text, and numbers tokenize less efficiently.</li>
           </ul>
           <div class="flex-fill" data-editable>
             <div class="token-row" style="margin-bottom:20px;">
@@ -246,7 +246,7 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 02</div>
         <h2 class="slide-title" data-editable>From Probabilities to a Chosen Word</h2>
-        <p class="subtitle" data-editable>For every next token, the model doesn't output one answer — it outputs a full probability ranking over its entire vocabulary.</p>
+        <p class="subtitle" data-editable>The model never just outputs one answer for the next token — it ranks its entire vocabulary by probability first.</p>
         <div class="rule"></div>
         <div class="two-col">
           <div data-editable>
@@ -258,9 +258,9 @@ ul.bullets.tight li{font-size:22px;}
             <div class="prob-row"><span class="prob-label">glitter</span><div class="prob-track"><div class="prob-fill" style="width:1%"></div></div><span class="prob-pct">1%</span></div>
           </div>
           <ul class="bullets">
-            <li data-editable>This ranked list is called the <b>logits</b> (turned into percentages via a function called softmax).</li>
-            <li data-editable>A <b>sampling strategy</b> then picks one token from this distribution — it doesn't always take the top choice.</li>
-            <li data-editable>Two dials control that choice: <b>temperature</b> and <b>top-p</b> — covered next.</li>
+            <li data-editable>That ranked list has a name: <b>logits</b> — a function called softmax turns them into the percentages you see here.</li>
+            <li data-editable>From there, a <b>sampling strategy</b> picks one token from the distribution, and it won't always grab the top choice.</li>
+            <li data-editable>Two dials shape that pick: <b>temperature</b> and <b>top-p</b>. Both are up next.</li>
           </ul>
         </div>
       </div>
@@ -271,14 +271,14 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 03</div>
         <h2 class="slide-title" data-editable>Temperature: the Randomness Dial</h2>
-        <p class="subtitle" data-editable>Temperature reshapes the probability ranking before a token is sampled — it doesn't change what the model "knows," only how boldly it gambles.</p>
+        <p class="subtitle" data-editable>Temperature doesn't change what the model knows. It just changes how boldly it's willing to gamble when picking the next token.</p>
         <div class="rule"></div>
         <div class="two-col">
           <ul class="bullets">
-            <li data-editable><b style="color:var(--amber)">Low temperature (≈0–0.3):</b> sharpens the distribution — the top choice dominates, output is focused and repeatable.</li>
-            <li data-editable><b style="color:var(--amber)">High temperature (≈1.0–2.0):</b> flattens the distribution — lower-ranked tokens get a real chance, output is varied and surprising.</li>
-            <li data-editable>Good defaults: low temperature for factual Q&amp;A or code; higher temperature for brainstorming or creative writing.</li>
-            <li data-editable>Temperature is a request parameter you set per API call — it isn't a property of the model itself.</li>
+            <li data-editable><b style="color:var(--amber)">Low temperature (≈0–0.3):</b> sharpens the distribution — the top choice wins out, so output stays focused and repeatable.</li>
+            <li data-editable><b style="color:var(--amber)">High temperature (≈1.0–2.0):</b> flattens that same distribution, giving lower-ranked tokens a real shot — expect output that's varied and surprising.</li>
+            <li data-editable>As a default: keep temperature low for factual Q&amp;A or code, and turn it up for brainstorming or creative writing.</li>
+            <li data-editable>You set temperature per API call, as a request parameter — it isn't baked into the model itself.</li>
           </ul>
           <div class="gauge-wrap" data-editable>
             <svg viewBox="0 0 220 140" width="320">
@@ -291,7 +291,7 @@ ul.bullets.tight li{font-size:22px;}
               <text x="190" y="138" fill="#a98fc9" font-family="Space Mono" font-size="14">2</text>
             </svg>
             <div class="gauge-val">temperature = 0.7</div>
-            <div class="gauge-caption">A balanced default: mostly coherent, with a little room for variety.</div>
+            <div class="gauge-caption">A middle-ground setting: mostly coherent, with a little room to surprise you.</div>
           </div>
         </div>
       </div>
@@ -313,7 +313,7 @@ ul.bullets.tight li{font-size:22px;}
               <line x1="110" y1="120" x2="110" y2="40" stroke="#f5a524" stroke-width="5" stroke-linecap="round" transform="rotate(-81 110 120)"/>
               <circle cx="110" cy="120" r="9" fill="#f5a524"/>
             </svg>
-            <div class="egg-out" data-editable>"...saw that the light was still working, just as it had every night for thirty years."<br><br><span style="color:var(--muted)">Run it five times → nearly the same sentence every time.</span></div>
+            <div class="egg-out" data-editable>"...saw that the light was still working, just as it had every night for thirty years."<br><br><span style="color:var(--muted)">Run it five times, and you'll get nearly the same sentence each time.</span></div>
           </div>
           <div class="egg-col high">
             <div class="egg-head" data-editable>temperature = 1.6 — wild</div>
@@ -323,10 +323,10 @@ ul.bullets.tight li{font-size:22px;}
               <line x1="110" y1="120" x2="110" y2="40" stroke="#f5a524" stroke-width="5" stroke-linecap="round" transform="rotate(54 110 120)"/>
               <circle cx="110" cy="120" r="9" fill="#f5a524"/>
             </svg>
-            <div class="egg-out" data-editable>"...saw a raccoon in a captain's hat, arguing with the fog about maritime law."<br><br><span style="color:var(--muted)">Run it five times → five wildly different, sometimes incoherent, scenes.</span></div>
+            <div class="egg-out" data-editable>"...saw a raccoon in a captain's hat, arguing with the fog about maritime law."<br><br><span style="color:var(--muted)">Run it five times, and you'll get five wildly different, occasionally incoherent, scenes.</span></div>
           </div>
         </div>
-        <p class="subtitle" style="margin:24px 0 0;font-size:20px;" data-editable><b style="color:var(--cyan)">The lesson:</b> temperature doesn't add "creativity" from nowhere — it changes how far the sampler strays from the model's most likely guess. Push it too high and fluency itself breaks down.</p>
+        <p class="subtitle" style="margin:24px 0 0;font-size:20px;" data-editable><b style="color:var(--cyan)">The lesson:</b> temperature isn't manufacturing creativity out of nothing — it's changing how far the sampler wanders from the model's most likely guess. Crank it too high, and fluency itself starts to break down.</p>
       </div>
     </section>
 
@@ -335,21 +335,21 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 04</div>
         <h2 class="slide-title" data-editable>Top-p: a Different Kind of Cutoff</h2>
-        <p class="subtitle" data-editable>Top-p (nucleus sampling) restricts the candidate pool by cumulative probability, instead of reshaping the whole curve like temperature does.</p>
+        <p class="subtitle" data-editable>Instead of reshaping the whole curve like temperature does, top-p (nucleus sampling) trims the candidate pool by cumulative probability.</p>
         <div class="rule"></div>
         <div class="card-grid cols-2">
           <div class="card cy">
             <h3 data-editable>How it works</h3>
-            <p data-editable>The model keeps adding candidates — highest probability first — until their combined probability reaches p (e.g. 0.9), then samples only from that shortlist.</p>
+            <p data-editable>Starting with the highest-probability candidate, the model keeps adding more until they add up to p (e.g. 0.9) — then it samples only from that shortlist.</p>
           </div>
           <div class="card">
             <h3 data-editable>Why use both</h3>
-            <p data-editable>Temperature and top-p are often combined: temperature sets "how sharp," top-p sets "how many options are even on the table."</p>
+            <p data-editable>Teams often combine the two: temperature sets "how sharp," top-p decides "how many options even make the table."</p>
           </div>
         </div>
         <ul class="bullets tight" style="margin-top:30px;">
-          <li data-editable>top-p = 1.0 considers the whole vocabulary; top-p = 0.1 restricts sampling to a very narrow, high-confidence shortlist.</li>
-          <li data-editable>Most APIs let you set both — in practice, teams usually tune one and leave the other at its default.</li>
+          <li data-editable>Set top-p to 1.0 and the whole vocabulary's in play; drop it to 0.1 and you're sampling from a narrow, high-confidence shortlist.</li>
+          <li data-editable>Most APIs will let you set both, though in practice teams usually tune one and leave the other at its default.</li>
         </ul>
       </div>
     </section>
@@ -359,13 +359,13 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 05</div>
         <h2 class="slide-title" data-editable>The Context Window</h2>
-        <p class="subtitle" data-editable>A model can only "see" a fixed number of tokens at once — the system prompt, conversation history, and the model's own output all share this one budget.</p>
+        <p class="subtitle" data-editable>A model can only "see" a fixed number of tokens at once, and that budget gets split three ways: system prompt, conversation history, and the model's own output.</p>
         <div class="rule"></div>
         <div class="two-col">
           <ul class="bullets">
-            <li data-editable>Context windows range from a few thousand tokens to well over a hundred thousand, depending on the model.</li>
-            <li data-editable>Once the budget is full, the oldest turns must be dropped, summarized, or truncated — the model simply can't see them anymore.</li>
-            <li data-editable>A longer context window doesn't guarantee better use of it — models can still miss details buried in the middle of a huge prompt.</li>
+            <li data-editable>Depending on the model, that window might hold a few thousand tokens, or well over a hundred thousand.</li>
+            <li data-editable>Once you hit the ceiling, something has to give: the oldest turns get dropped, summarized, or truncated, and the model just can't see them anymore.</li>
+            <li data-editable>A bigger window doesn't mean the model uses it well, either — details buried in the middle of a huge prompt can still slip past it.</li>
           </ul>
           <div class="flex-fill" data-editable>
             <div class="context-strip"><span class="bracket">[</span> ...<span class="num">8,192</span> tokens... <span class="bracket">]</span></div>
@@ -381,7 +381,7 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Concept 06</div>
         <h2 class="slide-title" data-editable>Cost &amp; Latency: Tokens Are the Meter</h2>
-        <p class="subtitle" data-editable>API providers bill per token, usually with separate rates for input and output — and more tokens generally means a slower response too.</p>
+        <p class="subtitle" data-editable>Providers bill you per token, usually at separate rates for input versus output — and the more tokens involved, the slower your response tends to be.</p>
         <div class="rule"></div>
         <table class="price-table" data-editable>
           <tr><th>Prompt shape</th><th>Approx. input tokens</th><th>Effect</th></tr>
@@ -390,8 +390,8 @@ ul.bullets.tight li{font-size:22px;}
           <tr><td>+ pasted document context</td><td class="mono">~6,000</td><td>Noticeably slower, priced accordingly</td></tr>
         </table>
         <ul class="bullets tight" style="margin-top:28px;">
-          <li data-editable>Trimming unnecessary history or pasted text is a direct lever on both cost and response time.</li>
-          <li data-editable>Longer requested outputs (e.g. "write 2,000 words") also add latency — generation is sequential, one token at a time.</li>
+          <li data-editable>Cut the unnecessary history or pasted text, and you're pulling a direct lever on both cost and response time.</li>
+          <li data-editable>Ask for a longer output — "write 2,000 words," say — and you'll add latency too, since generation happens one token at a time, in sequence.</li>
         </ul>
       </div>
     </section>
@@ -401,11 +401,11 @@ ul.bullets.tight li{font-size:22px;}
       <div class="slide-inner">
         <div class="eyebrow">Demo Walkthrough → notebook</div>
         <h2 class="slide-title" data-editable>Counting Real Tokens, Live</h2>
-        <p class="subtitle" data-editable>class-2.ipynb uses <b style="color:var(--cyan)">tiktoken</b> to count tokens locally, then calls an LLM API to compare a low- vs high-temperature response.</p>
+        <p class="subtitle" data-editable>class-2.ipynb starts with <b style="color:var(--cyan)">tiktoken</b>, counting tokens locally, then calls an LLM API to compare a low-temperature response against a high-temperature one.</p>
         <div class="rule"></div>
         <div class="two-col">
           <div class="code-box" data-editable>
-<span class="cm"># count tokens without calling any API</span><br>
+<span class="cm"># tokenize locally — no API call required</span><br>
 <span class="kw">import</span> tiktoken<br>
 enc = tiktoken.get_encoding(<span class="st">"cl100k_base"</span>)<br>
 tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<br>
@@ -413,9 +413,9 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
 <span class="cm"># → 5 ['Gener', 'ative', ' AI', ' is', ' transformative']</span>
           </div>
           <ul class="bullets">
-            <li data-editable>The notebook prints exact token counts for several example sentences, in English and another language.</li>
-            <li data-editable>It then sends the same prompt twice via the API — once at temperature 0.1, once at 1.2 — printing both completions side by side.</li>
-            <li data-editable>A final cell estimates cost for a sample request using a published per-token price.</li>
+            <li data-editable>For a handful of example sentences — English and one other language — the notebook prints exact token counts.</li>
+            <li data-editable>Then it sends the same prompt to the API twice, once at temperature 0.1 and once at 1.2, and prints both completions side by side.</li>
+            <li data-editable>The last cell takes a published per-token price and estimates what a sample request would cost.</li>
           </ul>
         </div>
       </div>
@@ -428,10 +428,10 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
         <h2 class="slide-title" data-editable>Tokens &amp; Sampling Myths</h2>
         <div class="rule"></div>
         <div class="card-grid cols-2">
-          <div class="pit-card"><h3 data-editable>"Temperature 0 is always identical"</h3><p data-editable>It's close to deterministic, but ties and backend nondeterminism can still cause tiny variation between calls.</p></div>
-          <div class="pit-card"><h3 data-editable>"Tokens = words"</h3><p data-editable>Tokens are sub-word pieces — punctuation, whitespace, and word fragments each count too.</p></div>
-          <div class="pit-card"><h3 data-editable>"More context is always better"</h3><p data-editable>Larger context costs more, runs slower, and doesn't guarantee the model attends evenly to everything inside it.</p></div>
-          <div class="pit-card"><h3 data-editable>"Higher temperature = smarter answers"</h3><p data-editable>Higher temperature means more varied, not more correct — it can just as easily introduce errors.</p></div>
+          <div class="pit-card"><h3 data-editable>"Temperature 0 is always identical"</h3><p data-editable>It's close to deterministic — though ties and backend nondeterminism can still sneak in tiny variation between calls.</p></div>
+          <div class="pit-card"><h3 data-editable>"Tokens = words"</h3><p data-editable>A token is a sub-word piece, and punctuation, whitespace, and word fragments all count as one too.</p></div>
+          <div class="pit-card"><h3 data-editable>"More context is always better"</h3><p data-editable>A larger context costs more and runs slower, and it still doesn't guarantee the model pays even attention to everything inside it.</p></div>
+          <div class="pit-card"><h3 data-editable>"Higher temperature = smarter answers"</h3><p data-editable>More varied, sure — but not more correct. Higher temperature can just as easily introduce errors.</p></div>
         </div>
       </div>
     </section>
@@ -441,13 +441,13 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
       <div class="slide-inner">
         <div class="eyebrow">Hands-On Preview</div>
         <h2 class="slide-title" data-editable>In the Notebook: Measure Before You Guess</h2>
-        <p class="subtitle" data-editable>class-2.ipynb closes with five challenges. A preview:</p>
+        <p class="subtitle" data-editable>class-2.ipynb wraps up with five challenges — here's a preview:</p>
         <div class="rule"></div>
         <div class="card-grid cols-2">
-          <div class="card"><span class="num">01</span><h3 data-editable>Token-count a paragraph</h3><p data-editable>Compare your own estimate to the tokenizer's real count.</p></div>
-          <div class="card cy"><span class="num">02</span><h3 data-editable>Sweep temperature</h3><p data-editable>Generate at 0, 0.7, and 1.5 and describe the differences.</p></div>
-          <div class="card"><span class="num">03</span><h3 data-editable>Estimate a bill</h3><p data-editable>Given a per-token price, compute the cost of a 5,000-token request.</p></div>
-          <div class="card cy"><span class="num">04</span><h3 data-editable>Simulate truncation</h3><p data-editable>Trim a long conversation to fit inside a small pretend context window.</p></div>
+          <div class="card"><span class="num">01</span><h3 data-editable>Token-count a paragraph</h3><p data-editable>See how close your own guess comes to the tokenizer's real count.</p></div>
+          <div class="card cy"><span class="num">02</span><h3 data-editable>Sweep temperature</h3><p data-editable>Generate output at 0, 0.7, and 1.5, then describe what actually changes.</p></div>
+          <div class="card"><span class="num">03</span><h3 data-editable>Estimate a bill</h3><p data-editable>Given a per-token price, work out what a 5,000-token request would cost.</p></div>
+          <div class="card cy"><span class="num">04</span><h3 data-editable>Simulate truncation</h3><p data-editable>Take a long conversation and squeeze it into a small pretend context window.</p></div>
         </div>
       </div>
     </section>
@@ -459,10 +459,10 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
         <h2 class="slide-title" data-editable>Key Takeaways</h2>
         <div class="rule"></div>
         <ul class="recap-list">
-          <li><span class="recap-num">01</span><span data-editable>Models process sub-word tokens, not words — tokenization mechanics shape both behavior and cost.</span></li>
-          <li><span class="recap-num">02</span><span data-editable>Temperature and top-p both control sampling randomness, but reshape the candidate pool in different ways.</span></li>
-          <li><span class="recap-num">03</span><span data-editable>The context window is a shared, finite token budget for prompt, history, and output combined.</span></li>
-          <li><span class="recap-num">04</span><span data-editable>Every token costs money and time — trimming context is a real lever on both.</span></li>
+          <li><span class="recap-num">01</span><span data-editable>Not words, but sub-word tokens — that's the real unit a model reads, and tokenization mechanics shape both its behavior and its cost.</span></li>
+          <li><span class="recap-num">02</span><span data-editable>Temperature and top-p both dial sampling randomness up or down. They just reshape the candidate pool in different ways to get there.</span></li>
+          <li><span class="recap-num">03</span><span data-editable>Prompt, history, and output all draw from the same pool of tokens — the context window is that one shared, finite budget.</span></li>
+          <li><span class="recap-num">04</span><span data-editable>Money and time — every token costs you both. Trim your context, and you're pulling a real lever on each.</span></li>
         </ul>
       </div>
     </section>
@@ -473,7 +473,7 @@ tokens = enc.encode(<span class="st">"Generative AI is transformative."</span>)<
         <div class="tag mg">Next Class</div>
         <div class="next-card">
           <h2 data-editable>Capabilities, Limitations &amp; Responsible AI</h2>
-          <p data-editable>Now that you can see how LLMs generate and sample text, we'll examine where that mechanism breaks down — hallucination, bias, and what responsible use looks like in practice.</p>
+          <p data-editable>You've now seen how LLMs generate and sample text — next, we'll look at where that mechanism breaks down: hallucination, bias, and what responsible use actually looks like.</p>
         </div>
       </div>
     </section>
