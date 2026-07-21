@@ -190,9 +190,9 @@ ul.bullets.tight li{font-size:22px;}
         <div class="rule"></div>
         <div class="card-grid cols-2">
           <div class="card cy"><h3 data-editable>Drafting &amp; Summarizing</h3><p data-editable>Give it rough notes and it turns them into readable prose — or hand it a long document and it pulls out the key points.</p></div>
-          <div class="card"><h3 data-editable>Brainstorming &amp; Rewriting</h3><p data-editable>Need a different tone, or five different ways to phrase the same paragraph? This is exactly the kind of variation it's built to generate.</p></div>
+          <div class="card"><h3 data-editable>Brainstorming &amp; Rewriting</h3><p data-editable>Need a different tone, or another phrasing? That's the variation it's built to generate.</p></div>
           <div class="card cy"><h3 data-editable>Code Assistance</h3><p data-editable>It explains a chunk of code, ports it to another language, or knocks out boilerplate and test scaffolding for you.</p></div>
-          <div class="card"><h3 data-editable>Translation &amp; Style Transfer</h3><p data-editable>With a source text as an anchor, it can shift the language or the reading level without losing the meaning.</p></div>
+          <div class="card"><h3 data-editable>Translation &amp; Style Transfer</h3><p data-editable>With a source text as an anchor, it can shift the language or the reading level.</p></div>
         </div>
         <ul class="bullets tight" style="margin-top:26px;">
           <li data-editable>Notice the pattern here: each of these tasks hands the model something concrete to transform. None of them ask it to invent something from scratch and verify it unaided.</li>
@@ -261,7 +261,7 @@ ul.bullets.tight li{font-size:22px;}
         <div class="rule"></div>
         <div class="card-grid cols-2">
           <div class="card"><h3 data-editable>Arithmetic &amp; logic slips</h3><p data-editable>Even when the surrounding prose reads perfectly confident, multi-step math or precise counting can quietly go wrong.</p></div>
-          <div class="card cy"><h3 data-editable>Stale knowledge</h3><p data-editable>Anything past the training cutoff — recent events, new releases — is something the model may be missing, guessing at, or simply getting wrong.</p></div>
+          <div class="card cy"><h3 data-editable>Stale knowledge</h3><p data-editable>Anything past the training cutoff — recent events, new releases — the model may be missing, guessing, or just wrong.</p></div>
           <div class="card"><h3 data-editable>Prompt injection</h3><p data-editable>Feed the model untrusted text — a webpage, a document — and it can carry hidden instructions that hijack its behavior.</p></div>
           <div class="card cy"><h3 data-editable>Run-to-run inconsistency</h3><p data-editable>Ask the same question twice and you can get two different answers, especially once the temperature's turned up.</p></div>
         </div>
@@ -320,7 +320,7 @@ response = client.messages.create(...)<br>
           <div class="pit-card"><h3 data-editable>"If it sounds confident, it's correct"</h3><p data-editable>Fluency and accuracy come from completely different mechanisms. A confident tone tells you nothing about whether something's true.</p></div>
           <div class="pit-card"><h3 data-editable>"AI output is neutral and objective"</h3><p data-editable>Training data and tuning choices shape every model that exists — there's no such thing as a bias-free default.</p></div>
           <div class="pit-card"><h3 data-editable>"One better prompt fixes bias"</h3><p data-editable>A good prompt can dial down the visible bias in a single response, but the underlying model still has it.</p></div>
-          <div class="pit-card"><h3 data-editable>"It will tell me when it doesn't know"</h3><p data-editable>More often than you'd like, the model guesses fluently instead of admitting it doesn't know — so don't lean on self-reported uncertainty.</p></div>
+          <div class="pit-card"><h3 data-editable>"It will tell me when it doesn't know"</h3><p data-editable>The model guesses fluently instead of admitting it doesn't know — don't rely on self-reported uncertainty.</p></div>
         </div>
       </div>
     </section>
@@ -351,7 +351,7 @@ response = client.messages.create(...)<br>
           <li><span class="recap-num">01</span><span data-editable>Drafting, summarizing, rewriting, code assistance — that's the territory where LLMs genuinely excel: transforming text that's already there.</span></li>
           <li><span class="recap-num">02</span><span data-editable>Models generate plausible text, not verified facts — and that's the root of hallucination. Confidence was never the same thing as accuracy.</span></li>
           <li><span class="recap-num">03</span><span data-editable>These aren't occasional bugs: bias, stale knowledge, and inconsistency are structural, baked into how the models get trained in the first place.</span></li>
-          <li><span class="recap-num">04</span><span data-editable>Responsible use isn't optional extras — it's verification, human review, disclosure, and data protection, applied every time it matters.</span></li>
+          <li><span class="recap-num">04</span><span data-editable>Responsible use means verification, human review, disclosure, and data protection, applied every time it matters.</span></li>
         </ul>
       </div>
     </section>
