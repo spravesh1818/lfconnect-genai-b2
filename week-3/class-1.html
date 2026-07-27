@@ -358,17 +358,17 @@ table.compare td:first-child, table.compare th:first-child{ font-weight:600; wid
       <div class="slide-inner">
         <div class="kicker" data-editable>Demo Walkthrough</div>
         <h1 class="slide-title" data-editable>From the Chat Box to the API</h1>
-        <p class="slide-sub" data-editable style="margin-bottom:22px;">The notebook recreates the same trigger → action idea manually in Python, calling the OpenAI and Anthropic SDKs directly instead of clicking in a chat UI. Seeing the raw call demystifies what the chat window is doing behind the scenes.</p>
+        <p class="slide-sub" data-editable style="margin-bottom:22px;">The notebook recreates the same trigger → action idea manually in Python, calling the Groq SDK directly instead of clicking in a chat UI. Seeing the raw call demystifies what the chat window is doing behind the scenes.</p>
         <div class="code-block" data-editable>
 <span class="c"># the same "trigger" you'd type into ChatGPT, sent via code</span><br>
 response = client.chat.completions.create(<br>
-&nbsp;&nbsp;model=<span class="s">"gpt-4o-mini"</span>,<br>
+&nbsp;&nbsp;model=<span class="s">"llama-3.3-70b-versatile"</span>,<br>
 &nbsp;&nbsp;messages=[<br>
 &nbsp;&nbsp;&nbsp;&nbsp;{<span class="k">"role"</span>: <span class="s">"system"</span>, <span class="k">"content"</span>: <span class="s">"You are a concise writing coach."</span>},<br>
 &nbsp;&nbsp;&nbsp;&nbsp;{<span class="k">"role"</span>: <span class="s">"user"</span>, <span class="k">"content"</span>: <span class="s">"Outline a blog post about no-code AI."</span>}<br>
 &nbsp;&nbsp;]<br>
 )</div>
-        <p class="slide-sub" data-editable style="margin-top:22px;">Same idea, same roles (system / user / assistant) — just written instead of clicked. The notebook runs this against both providers so you can compare tone and structure side by side.</p>
+        <p class="slide-sub" data-editable style="margin-top:22px;">Same idea, same roles (system / user / assistant) — just written instead of clicked. The notebook runs this against Groq-hosted models so you can compare tone and structure side by side.</p>
       </div>
     </section>
 
@@ -396,7 +396,7 @@ response = client.chat.completions.create(<br>
         <div class="card-grid">
           <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">01</span><h3 data-editable>Build a 3-turn workflow chain</h3></div>
           <div class="node-card"><div class="node-dot trigger"></div><span class="node-label">02</span><h3 data-editable>Design a prompt-library template</h3></div>
-          <div class="node-card"><div class="node-dot action"></div><span class="node-label">03</span><h3 data-editable>Call both APIs and compare answers</h3></div>
+          <div class="node-card"><div class="node-dot action"></div><span class="node-label">03</span><h3 data-editable>Call Groq and compare two models</h3></div>
           <div class="node-card"><div class="node-dot action"></div><span class="node-label">04</span><h3 data-editable>Write Project instructions for a real use case</h3></div>
         </div>
       </div>
