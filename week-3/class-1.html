@@ -73,6 +73,10 @@ body{font-family:var(--font-body);}
 .nav-prev{ left:22px; }
 .nav-next{ right:22px; background:var(--orange); color:#fff; }
 
+.colab-btn{ position:fixed; top:16px; right:16px; z-index:1000; display:flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:700; font-size:14px; text-decoration:none; color:var(--ink); background:#fff; border:2px solid var(--ink); border-radius:999px; padding:10px 18px; box-shadow:4px 4px 0 rgba(26,26,26,.14); transition:transform .15s ease; }
+.colab-btn:hover{ transform:translateY(-2px); }
+.colab-btn .dot{ width:10px; height:10px; border-radius:50%; background:var(--teal); flex:0 0 auto; }
+
 /* inline editing */
 .edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
 .edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(26,26,26,.6); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
@@ -449,6 +453,7 @@ response = client.chat.completions.create(<br>
 
 <div class="edit-hotzone"></div>
 <button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+<a class="colab-btn" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-3/class-1.ipynb" target="_blank" rel="noopener"><span class="dot"></span>Open in Colab</a>
 
 <div class="deck-controls">
   <span>GenAI Foundations / Week 3 / Class 1</span>
