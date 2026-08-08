@@ -207,7 +207,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
           <li><span class="num">02</span><span data-editable>Plan — how the model decides what to do next</span></li>
           <li><span class="num">03</span><span data-editable>Act — tool &amp; function calling, step by step</span></li>
           <li><span class="num">04</span><span data-editable>Observe — feeding results back and continuing</span></li>
-          <li><span class="num">05</span><span data-editable>Live demo: a full function-calling round trip</span></li>
+          <li><span class="num">05</span><span data-editable>Live demo: LangChain tool-calling round trip</span></li>
         </ol>
       </div>
       <div class="titleblock blueprint-frame">
@@ -407,8 +407,8 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
           <span class="kicker" data-editable>Demo Walkthrough</span>
           <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
         </div>
-        <h2 class="slide-title" data-editable>Live Function-Calling <span class="accent">Demo</span></h2>
-        <p style="font-size:22px; opacity:.85; margin-bottom:16px;" data-editable>In the notebook, one user question produces four real messages:</p>
+        <h2 class="slide-title" data-editable>Live LangChain Tool-Calling <span class="accent">Demo</span></h2>
+        <p style="font-size:22px; opacity:.85; margin-bottom:16px;" data-editable>In the notebook, LangChain + Groq turn one user question into a Plan → Act → Observe trace:</p>
         <div class="demo-panel" style="font-size:19px;">
 1. <span class="tag">USER</span> &rarr; "What's the weather in Kathmandu, and should I bring a jacket?"<br>
 2. <span class="tag">ASSISTANT</span> &rarr; tool_call: get_weather(location="Kathmandu")<br>
@@ -455,6 +455,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
           <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
         </div>
         <h2 class="slide-title" data-editable>Notebook <span class="accent">Challenges</span></h2>
+        <p style="font-size:22px; opacity:.85; margin-bottom:12px;" data-editable>Implement these in the Class 2 notebook with LangChain tools.</p>
         <ul class="bullets">
           <li data-editable>01 — Add a second tool: convert_currency(amount, from, to)</li>
           <li data-editable>02 — Write a get_time(timezone) tool from scratch and wire it in</li>
@@ -519,7 +520,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
         <div style="margin-top:100px; max-width:1400px;">
           <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WK5 &middot; CLASS 03</div>
           <h2 class="slide-title" style="font-size:100px;" data-editable>Building a <span class="accent">Simple Agent</span></h2>
-          <p style="font-size:28px; max-width:1200px; line-height:1.5; opacity:.9;" data-editable>Memory concepts, choosing a framework vs. a custom loop, and a hands-on build: a minimal multi-turn agent with at least one tool.</p>
+          <p style="font-size:28px; max-width:1200px; line-height:1.5; opacity:.9;" data-editable>Memory across turns, a multi-tool LangChain agent on Groq, and a hands-on build: calculator + mock search over several messages.</p>
         </div>
       </div>
       <div class="titleblock blueprint-frame">

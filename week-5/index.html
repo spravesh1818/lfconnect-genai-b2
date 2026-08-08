@@ -67,6 +67,16 @@ body{
 .class-card h3{ font-family:var(--font-display); font-weight:700; font-size:27px; text-transform:uppercase; line-height:1.2; }
 .class-card p{ font-size:16px; line-height:1.55; opacity:.85; }
 .class-card .go{ margin-top:auto; font-family:var(--font-mono); font-size:13px; color:var(--cyan); letter-spacing:.06em; text-transform:uppercase; padding-top:10px; border-top:1px dashed rgba(127,209,255,.25); }
+.class-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:auto; padding-top:10px; border-top:1px dashed rgba(127,209,255,.25); }
+.class-actions a{
+  font-family:var(--font-mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  text-decoration:none; color:var(--cyan); border:1px solid rgba(127,209,255,.4);
+  padding:7px 12px; background:rgba(5,26,44,.5);
+}
+.class-actions a:hover{ border-color:var(--orange); color:var(--orange); }
+.class-actions a.colab{ color:var(--bg); background:var(--orange); border-color:var(--orange); }
+.class-actions a.colab:hover{ background:#ff9d5c; color:var(--bg); }
+.class-card .go{ display:none; }
 
 .titleblock-note{ font-family:var(--font-mono); font-size:13px; color:var(--cyan); opacity:.7; border:1px solid rgba(127,209,255,.3); padding:16px 20px; max-width:640px; }
 
@@ -100,24 +110,41 @@ footer{ margin-top:60px; text-align:center; font-family:var(--font-mono); font-s
 
   <div class="section-label">// Select a Class</div>
   <div class="classes">
-    <a class="class-card" href="class-1.html">
+    <div class="class-card">
       <span class="cnum">Class 01</span>
       <h3>What Makes an Agent an Agent?</h3>
       <p>Agents vs. single prompts, autonomy as a spectrum, and a first look at the decision-making loop.</p>
-      <span class="go">Open Deck &rarr;</span>
-    </a>
-    <a class="class-card" href="class-2.html">
+      <div class="class-actions">
+        <a href="class-1.html">Open Deck →</a>
+        <a href="class-1.ipynb">Notebook</a>
+        <a class="colab" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-5/class-1.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+      </div>
+    </div>
+    <div class="class-card">
       <span class="cnum">Class 02</span>
       <h3>The Agent Loop — Plan, Act, Observe</h3>
-      <p>Tool and function calling in detail, with a live, runnable function-calling demo.</p>
-      <span class="go">Open Deck &rarr;</span>
-    </a>
-    <a class="class-card" href="class-3.html">
+      <p>Tool and function calling in detail, with a live, runnable LangChain tool-calling demo.</p>
+      <div class="class-actions">
+        <a href="class-2.html">Open Deck →</a>
+        <a href="class-2.ipynb">Notebook</a>
+        <a class="colab" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-5/class-2.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+      </div>
+    </div>
+    <div class="class-card">
       <span class="cnum">Class 03</span>
       <h3>Building a Simple Agent</h3>
-      <p>Memory concepts, framework vs. custom loop, and a hands-on minimal tool-using agent.</p>
-      <span class="go">Open Deck &rarr;</span>
-    </a>
+      <p>Memory across turns, a multi-tool LangChain agent on Groq, and a hands-on calculator + search build.</p>
+      <div class="class-actions">
+        <a href="class-3.html">Open Deck →</a>
+        <a href="class-3.ipynb">Notebook</a>
+        <a class="colab" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-5/class-3.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="titleblock-note" style="margin-bottom:24px;">
+    Each class pairs a slide deck (<b>class-N.html</b>) with a runnable notebook (<b>class-N.ipynb</b>).
+    Class 1 uses Groq only; Classes 2–3 use LangChain + Groq. Add a Colab secret named <b>GROQ_API_KEY</b> before running live cells.
   </div>
 
   <div class="titleblock-note">DWG NO. WK5-INDEX &nbsp;&middot;&nbsp; SCALE 1:1 &nbsp;&middot;&nbsp; REV A &nbsp;&middot;&nbsp; 3 SHEETS</div>

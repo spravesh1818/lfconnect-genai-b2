@@ -173,7 +173,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
         <div style="margin-top:120px; max-width:1400px;">
           <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WK5 &middot; CLASS 03 &middot; INTRODUCTION TO AI AGENTS</div>
           <h1 class="slide-title" style="font-size:150px; margin:0 0 30px;" data-editable>Building a <span class="accent">Simple Agent</span></h1>
-          <p style="font-size:30px; max-width:1200px; line-height:1.5; opacity:.92;" data-editable>Memory, picking a framework vs. rolling your own, and a hands-on build: a minimal agent loop with real tools, running across multiple turns.</p>
+          <p style="font-size:30px; max-width:1200px; line-height:1.5; opacity:.92;" data-editable>Memory across turns, a multi-tool LangChain agent on Groq, and a hands-on build: calculator + mock search running over several messages.</p>
         </div>
       </div>
       <div class="loop-diagram show-arcs" style="position:absolute; right:110px; bottom:150px;" aria-hidden="true">
@@ -205,7 +205,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
         <ol class="agenda-list">
           <li><span class="num">01</span><span data-editable>Why memory matters once a loop has more than one step</span></li>
           <li><span class="num">02</span><span data-editable>Working memory vs. persistent memory</span></li>
-          <li><span class="num">03</span><span data-editable>Custom loop vs. a framework — how to choose</span></li>
+          <li><span class="num">03</span><span data-editable>How this course ships agents (LangChain) + alternatives</span></li>
           <li><span class="num">04</span><span data-editable>Anatomy of a minimal agent, and its guardrails</span></li>
           <li><span class="num">05</span><span data-editable>Hands-on: build the loop with a calculator &amp; search tool</span></li>
         </ol>
@@ -290,7 +290,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
             </ul>
           </div>
           <div class="card blueprint-frame">
-            <div class="tag">e.g. LangChain</div>
+            <div class="tag">LangChain (this course)</div>
             <h3>Framework</h3>
             <ul>
               <li data-editable>Built-in tool routing, memory, many integrations</li>
@@ -299,7 +299,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
             </ul>
           </div>
         </div>
-        <p style="font-size:22px; opacity:.8; margin-top:26px;" data-editable>Guidance: start custom to understand the loop — reach for a framework when you outgrow it.</p>
+        <p style="font-size:22px; opacity:.8; margin-top:26px;" data-editable>Guidance: Class 1 showed the loop by hand; from Class 2 we ship with LangChain + Groq. LangGraph fits complex graphs; LlamaIndex is another full agent stack with the same ideas.</p>
       </div>
       <div class="titleblock blueprint-frame">
         <div class="tb-row"><span>DWG NO.</span><b>WK5-C3</b></div>
@@ -456,7 +456,7 @@ img, video, canvas, svg { max-width:100%; max-height:100%; }
           <div class="recap-cols" style="grid-template-columns:1fr;">
             <ul class="bullets">
               <li data-editable>Memory is just the message list you carry through the loop</li>
-              <li data-editable>Start with a custom loop — reach for a framework once you outgrow it</li>
+              <li data-editable>Class 1 built the loop by hand; from Class 2 we ship with LangChain + Groq — LangGraph or LlamaIndex when you need alternatives</li>
               <li data-editable>A minimal agent = system prompt + loop + tools + a stopping condition</li>
               <li data-editable>Guardrails (turn limits, validation, logging) are what make a loop production-ready</li>
             </ul>
