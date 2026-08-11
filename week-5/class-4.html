@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class 4 · Long-Term Memory &amp; LangGraph Agents — Week 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   =========================================== */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#000); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; background:var(--slide-bg,#fff); }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; background:var(--slide-bg,#fff); }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+.deck-controls { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:1000; }
+@media print {
+  html, body { width:1920px; height:auto; overflow:visible; background:#fff; }
+  .deck-viewport { position:static; overflow:visible; background:#fff; }
+  .deck-stage { position:static; width:auto; height:auto; transform:none!important; background:none; }
+  .slide { position:relative; display:block!important; visibility:visible!important; opacity:1!important; pointer-events:auto!important; width:1920px; height:1080px; break-after:page; page-break-after:always; }
+  .slide:last-child { break-after:auto; page-break-after:auto; }
+  .deck-controls { display:none!important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; transition-duration:.2s!important; }
+}
+
+/* ===========================================
+   WEEK 5 THEME — THE BLUEPRINT / LOOP SCHEMATIC
+   =========================================== */
+:root{
+  --bg:#0b3d63;
+  --cyan:#7fd1ff;
+  --white:#eaf6ff;
+  --orange:#ff8a3d;
+  --font-display:'Big Shoulders Display', sans-serif;
+  --font-body:'IBM Plex Sans', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+}
+*{ box-sizing:border-box; }
+.slide{
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.14) 1px, transparent 1px),
+    linear-gradient(rgba(127,209,255,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127,209,255,.055) 1px, transparent 1px);
+  background-size:240px 240px, 240px 240px, 40px 40px, 40px 40px;
+  color:var(--white);
+  font-family:var(--font-body);
+}
+.slide-inner{ position:absolute; inset:0; padding:66px 90px 0 90px; }
+
+.eyebrow-row{ display:flex; align-items:center; gap:22px; margin-bottom:8px; }
+.kicker{ font-family:var(--font-mono); font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--cyan); white-space:nowrap; opacity:.9; }
+.measure-rule{ flex:1; height:14px; opacity:.6; min-width:120px; }
+.mline{ stroke:var(--cyan); stroke-width:1.5; stroke-dasharray:5 5; }
+.marrow{ fill:var(--cyan); }
+
+.slide-title{ font-family:var(--font-display); font-weight:900; font-size:66px; text-transform:uppercase; letter-spacing:.005em; line-height:1.05; margin:10px 0 36px; color:var(--white); }
+.slide-title .accent{ color:var(--orange); }
+
+.bullets{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:24px; max-width:1560px; }
+.bullets li{ font-size:30px; line-height:1.42; padding-left:46px; position:relative; }
+.bullets li::before{ content:""; position:absolute; left:0; top:9px; width:18px; height:18px; border:2px solid var(--cyan); border-radius:50%; opacity:.9; }
+.bullets li b{ color:var(--orange); font-weight:600; }
+.bullets.tight li{ font-size:26px; }
+
+.cards{ display:grid; grid-template-columns:repeat(var(--cols,2), 1fr); gap:26px; }
+.card{ position:relative; background:rgba(234,246,255,.045); border:1px solid rgba(127,209,255,.35); padding:26px 30px; }
+.card h3{ font-family:var(--font-display); font-weight:700; font-size:26px; color:var(--orange); text-transform:uppercase; letter-spacing:.02em; margin:0 0 12px; }
+.card p{ font-size:21px; line-height:1.45; margin:0; opacity:.94; }
+.card ul{ margin:0; padding-left:22px; font-size:20px; line-height:1.5; }
+.card .tag{ display:inline-block; font-family:var(--font-mono); font-size:14px; letter-spacing:.08em; color:var(--cyan); border:1px solid rgba(127,209,255,.5); padding:3px 10px; margin-bottom:12px; text-transform:uppercase; }
+
+.blueprint-frame{ position:relative; }
+.blueprint-frame::before, .blueprint-frame::after{ content:""; position:absolute; width:14px; height:14px; border-color:var(--orange); border-style:solid; }
+.blueprint-frame::before{ top:-1px; left:-1px; border-width:2px 0 0 2px; }
+.blueprint-frame::after{ bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+
+.two-col{ display:grid; grid-template-columns:1fr 460px; gap:50px; align-items:center; }
+.diagram-side{ display:flex; align-items:center; justify-content:center; }
+
+.demo-panel{ background:rgba(4,20,34,.55); border:1px solid rgba(127,209,255,.4); padding:24px 28px; font-family:var(--font-mono); font-size:20px; line-height:1.6; }
+.demo-panel .tag{ color:var(--orange); font-weight:600; }
+.demo-panel .muted{ opacity:.6; }
+
+.titleblock{ position:absolute; right:70px; bottom:44px; width:236px; font-family:var(--font-mono); font-size:13px; background:rgba(5,26,44,.6); border:1px solid rgba(127,209,255,.5); padding:10px 16px; }
+.titleblock .tb-row{ display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed rgba(127,209,255,.25); }
+.titleblock .tb-row:last-child{ border-bottom:none; }
+.titleblock .tb-row span{ color:var(--cyan); letter-spacing:.06em; opacity:.85; }
+.titleblock .tb-row b{ color:var(--white); font-weight:600; }
+
+.edit-hotzone { position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer; }
+.edit-toggle { position:fixed; top:16px; left:16px; z-index:10001; opacity:0; pointer-events:none; transition:opacity .3s ease; font-size:20px; background:rgba(0,0,0,.5); border:none; border-radius:8px; padding:8px 10px; cursor:pointer; }
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline: 2px dashed currentColor; outline-offset: 4px; }
+
+.deck-nav-top{ position:fixed; top:20px; right:26px; z-index:1000; display:flex; gap:14px; font-family:var(--font-mono); font-size:13px; letter-spacing:.06em; }
+.deck-nav-top a{ color:var(--cyan); text-decoration:none; border:1px solid rgba(127,209,255,.4); padding:6px 12px; background:rgba(5,26,44,.7); }
+.deck-nav-top a:hover{ border-color:var(--orange); color:var(--orange); }
+
+.deck-controls{ display:flex; align-items:center; gap:16px; font-family:var(--font-mono); font-size:14px; color:var(--cyan); background:rgba(5,26,44,.75); border:1px solid rgba(127,209,255,.4); padding:10px 22px; letter-spacing:.04em; }
+.deck-controls .dot{ opacity:.4; }
+.deck-controls #slideCounter{ color:var(--orange); font-weight:600; }
+
+.nav-btn{ position:fixed; bottom:26px; z-index:1000; font-family:var(--font-mono); font-size:14px; letter-spacing:.05em; color:var(--white); text-decoration:none; background:rgba(5,26,44,.75); border:1px solid rgba(127,209,255,.4); padding:10px 18px; }
+.nav-btn:hover{ border-color:var(--orange); color:var(--orange); }
+.nav-prev{ left:26px; }
+.nav-next{ right:26px; }
+
+.loop-diagram svg{ overflow:visible; }
+.node-circle{ fill:rgba(11,61,99,.6); stroke:var(--cyan); stroke-width:3; opacity:.5; }
+.node-letter{ font-family:var(--font-display); font-weight:900; font-size:22px; fill:var(--cyan); text-anchor:middle; opacity:.65; }
+.node-caption{ font-family:var(--font-mono); font-size:12px; letter-spacing:.12em; fill:var(--white); text-anchor:middle; opacity:.5; }
+.node.active .node-circle{ stroke:var(--orange); opacity:1; filter:drop-shadow(0 0 10px rgba(255,138,61,.65)); }
+.node.active .node-letter{ fill:var(--orange); opacity:1; }
+.node.active .node-caption{ fill:var(--orange); opacity:1; }
+.arc{ fill:none; stroke:var(--cyan); stroke-width:2.5; opacity:.6; stroke-dasharray:7 6; }
+.flow-line{ fill:none; stroke:var(--cyan); stroke-width:2.5; opacity:.75; stroke-dasharray:7 6; }
+
+.agenda-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:26px; max-width:1500px; }
+.agenda-list li{ display:flex; align-items:baseline; gap:30px; font-size:30px; }
+.agenda-list .num{ font-family:var(--font-display); font-weight:900; font-size:44px; color:var(--orange); min-width:76px; }
+
+.recap-cols{ display:grid; grid-template-columns:1fr 1fr; gap:40px; }
+
+.graph-flow{ display:flex; align-items:center; justify-content:center; gap:0; }
+.graph-node{ text-align:center; min-width:140px; }
+.graph-node .box{ background:rgba(4,20,34,.55); border:2px solid var(--cyan); padding:16px 20px; font-family:var(--font-mono); font-size:16px; letter-spacing:.08em; color:var(--white); }
+.graph-node.active .box{ border-color:var(--orange); color:var(--orange); box-shadow:0 0 12px rgba(255,138,61,.4); }
+.graph-arrow{ font-family:var(--font-mono); font-size:28px; color:var(--cyan); padding:0 12px; opacity:.8; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="loopArrowHead" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7fd1ff" opacity=".8"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<div class="deck-nav-top">
+  <a href="index.html">Week 5 Index</a>
+  <a href="../index.html">All Weeks</a>
+</div>
+
+<div class="deck-viewport">
+  <div class="deck-stage" id="deckStage">
+
+    <!-- SLIDE 1: TITLE -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>GenAI Foundations / Week 5 / Class 4</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <div style="margin-top:110px; max-width:1400px;">
+          <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WK5 &middot; CLASS 04 &middot; INTRODUCTION TO AI AGENTS</div>
+          <h1 class="slide-title" style="font-size:100px; margin:0 0 30px;" data-editable>Long-Term Memory &amp; <span class="accent">LangGraph Agents</span></h1>
+          <p style="font-size:30px; max-width:1200px; line-height:1.5; opacity:.92;" data-editable>JSON notes that survive across sessions, explicit LangGraph state machines, and a multi-agent game reporter — without vectors or RAG.</p>
+        </div>
+      </div>
+      <div style="position:absolute; right:90px; bottom:160px;" aria-hidden="true">
+        <div class="graph-flow">
+          <div class="graph-node active"><div class="box">REMEMBER</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node"><div class="box">RECALL</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node"><div class="box">ANSWER</div></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">01</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: AGENDA -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Today's Map</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Class 04 <span class="accent">Agenda</span></h2>
+        <ol class="agenda-list">
+          <li><span class="num">A</span><span data-editable><b>Part A</b> — Linear LangGraph memory graph: remember &rarr; recall &rarr; answer with JSON notes</span></li>
+          <li><span class="num">B</span><span data-editable><b>Part B</b> — Multi-agent game reporter: Researcher &rarr; Writer over a mock catalog</span></li>
+          <li><span class="num">01</span><span data-editable>Recap Class 3 short-term message memory vs. durable notes</span></li>
+          <li><span class="num">02</span><span data-editable>LangGraph building blocks: state, nodes, edges, checkpoint</span></li>
+          <li><span class="num">03</span><span data-editable>Notebook demos + challenges on both graphs</span></li>
+        </ol>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">02</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: RECAP CLASS 3 -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Recap</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Class 3: <span class="accent">Short-Term Memory</span></h2>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>Class 3 kept a <b>message list</b> through the Plan &rarr; Act &rarr; Observe loop</li>
+            <li data-editable>That list is <b>working memory</b> — it lives for one task / one thread</li>
+            <li data-editable>A checkpointer can resume the same conversation, but facts still vanish when you start fresh</li>
+            <li data-editable>Today we add <b>long-term notes</b> that outlive a single invoke</li>
+          </ul>
+          <div class="diagram-side">
+            <div class="demo-panel" style="font-size:18px;">
+<span class="tag">THREAD A</span> user &rarr; tool &rarr; assistant<br>
+<span class="tag">THREAD B</span> new session — no shared facts<br><br>
+<span class="muted">Short-term = messages in state.<br>Long-term = JSON file on disk.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">03</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: LONG-TERM WITHOUT VECTORS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 01</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Long-Term Memory <span class="accent">Without Vectors</span></h2>
+        <div class="two-col">
+          <ul class="bullets">
+            <li data-editable>Not every durable fact needs embeddings — start with a simple <b>JSON note store</b></li>
+            <li data-editable>Keys like <b>favorite_game</b> or <b>timezone</b> map to values your agent reads on every run</li>
+            <li data-editable>SQLite works too; this class uses <b>agent_notes.json</b> for transparency</li>
+            <li data-editable>Week 6 covers vector search — today is explicit read/write, not semantic retrieval</li>
+          </ul>
+          <div class="diagram-side">
+            <div class="demo-panel" style="font-size:17px;">
+<span class="tag">agent_notes.json</span><br>
+{<br>
+&nbsp;&nbsp;"favorite_game": "Celeste",<br>
+&nbsp;&nbsp;"timezone": "Asia/Kathmandu"<br>
+}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">04</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: WHY GRAPHS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 02</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Why Graphs Beat One <span class="accent">Opaque Loop</span></h2>
+        <ul class="bullets">
+          <li data-editable>A single while-loop hides <b>which step</b> is running and <b>what state</b> changed</li>
+          <li data-editable>LangGraph makes steps explicit: each node is a function, each edge is a allowed transition</li>
+          <li data-editable>You can inspect, log, and test nodes independently — remember vs. recall vs. answer</li>
+          <li data-editable>Multi-agent pipelines (researcher, writer, editor) become readable graphs, not nested if-statements</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">05</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: LANGGRAPH BUILDING BLOCKS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 03</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>LangGraph <span class="accent">Building Blocks</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame"><span class="tag">State</span><h3>TypedDict</h3><p data-editable>Shared fields every node reads and returns — e.g. user_message, notes, reply.</p></div>
+          <div class="card blueprint-frame"><span class="tag">Nodes</span><h3>Functions</h3><p data-editable>Python callables that take state in and return partial state updates.</p></div>
+          <div class="card blueprint-frame"><span class="tag">Edges</span><h3>START &rarr; END</h3><p data-editable><b>add_edge</b> wires fixed order; conditional edges branch on state.</p></div>
+          <div class="card blueprint-frame"><span class="tag">Checkpoint</span><h3>InMemorySaver</h3><p data-editable><b>compile(checkpointer=...)</b> saves thread state between invokes — same family as Class 3.</p></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">06</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: CHECKPOINTING VS JSON -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Concept 04</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Checkpointing vs <span class="accent">JSON File Memory</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame">
+            <h3>Checkpointer (InMemorySaver)</h3>
+            <ul>
+              <li data-editable>Resumes the <b>same graph run</b> by thread_id</li>
+              <li data-editable>Stores messages and intermediate state in memory</li>
+              <li data-editable>Gone when the process exits — unless you plug a durable backend</li>
+            </ul>
+          </div>
+          <div class="card blueprint-frame">
+            <h3>JSON Notes (agent_notes.json)</h3>
+            <ul>
+              <li data-editable>Survives <b>new threads</b> and notebook restarts</li>
+              <li data-editable>You choose exactly which facts to persist</li>
+              <li data-editable>Human-readable — open the file and audit what the agent "knows"</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:24px; opacity:.88; margin-top:28px;" data-editable>Part A uses <b>both</b>: checkpointer for the conversation thread, JSON for durable user facts.</p>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">07</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: PART A SCHEMATIC -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Part A</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Memory Graph — <span class="accent">Remember &rarr; Recall &rarr; Answer</span></h2>
+        <div class="two-col">
+          <ul class="bullets tight">
+            <li data-editable><b>remember</b> — detect a durable fact in the user message; write to JSON</li>
+            <li data-editable><b>recall</b> — load all notes from disk into state</li>
+            <li data-editable><b>answer</b> — Groq reply grounded in recalled notes</li>
+            <li data-editable>Demo: turn 1 saves a preference; turn 2 on a <b>new thread_id</b> still recalls it from JSON</li>
+          </ul>
+          <div class="diagram-side">
+            <div class="graph-flow" style="flex-direction:column; gap:16px;">
+              <div class="graph-node active"><div class="box">REMEMBER</div></div>
+              <span class="graph-arrow" style="transform:rotate(90deg);">&rarr;</span>
+              <div class="graph-node"><div class="box">RECALL</div></div>
+              <span class="graph-arrow" style="transform:rotate(90deg);">&rarr;</span>
+              <div class="graph-node"><div class="box">ANSWER</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">08</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: PART B MULTI-AGENT -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Part B</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Multi-Agent as <span class="accent">Specialized Nodes</span></h2>
+        <ul class="bullets">
+          <li data-editable>Each "agent" is just a node with a focused job — not a separate framework</li>
+          <li data-editable><b>Researcher</b> gathers facts from a mock game catalog (no live web scrape)</li>
+          <li data-editable><b>Writer</b> drafts prose using <b>only</b> the research string — no inventing stats</li>
+          <li data-editable>Optional <b>Editor</b> node in challenges tightens tone after the writer</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">09</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: GAME REPORTER FLOW -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Demo Walkthrough</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Game Reporter — <span class="accent">Researcher &rarr; Writer</span></h2>
+        <p style="font-size:22px; opacity:.85; margin-bottom:16px;" data-editable>Prompt: "Write a post about Celeste" — the graph runs two nodes in order:</p>
+        <div class="demo-panel" style="font-size:19px;">
+1. <span class="tag">RESEARCHER</span> &rarr; lookup_game("Celeste") &rarr; genre, year, bullet facts<br>
+2. <span class="tag">WRITER</span> &rarr; short blog draft citing only those facts<br>
+3. <span class="tag">MISS PATH</span> &rarr; unknown game returns a clear miss — writer must not hallucinate a catalog entry
+        </div>
+        <div class="graph-flow" style="margin-top:32px;">
+          <div class="graph-node active"><div class="box">RESEARCHER</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node"><div class="box">WRITER</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node"><div class="box">END</div></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">10</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: PITFALLS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Pitfalls &amp; Misconceptions</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Where This <span class="accent">Breaks</span></h2>
+        <div class="cards" style="--cols:2;">
+          <div class="card blueprint-frame"><h3>Stale Notes</h3><p data-editable>JSON facts never expire — you need update/delete logic or timestamps.</p></div>
+          <div class="card blueprint-frame"><h3>Invented Research</h3><p data-editable>Writer prompts must forbid filling gaps when the researcher returns a miss.</p></div>
+          <div class="card blueprint-frame"><h3>Unbounded Graphs</h3><p data-editable>Conditional edges without caps can loop forever — set recursion limits.</p></div>
+          <div class="card blueprint-frame"><h3>Confusing Layers</h3><p data-editable>Checkpointer &ne; long-term memory — don't expect InMemorySaver to survive restarts.</p></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">11</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: CHALLENGES -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Hands-On</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Notebook <span class="accent">Challenges</span></h2>
+        <p style="font-size:22px; opacity:.85; margin-bottom:12px;" data-editable>Implement these in the Class 4 notebook with LangGraph + Groq.</p>
+        <ul class="bullets tight">
+          <li data-editable>01 — Add a new game to <b>GAME_CATALOG</b> and run the reporter on it</li>
+          <li data-editable>02 — Add an <b>editor</b> node after Writer that shortens and tightens tone</li>
+          <li data-editable>03 — Persist your favorite game in Part A JSON; a later answer should mention it</li>
+          <li data-editable>04 (stretch) — Conditional edge: research miss &rarr; clarify game name instead of Writer</li>
+        </ul>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">12</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 13: TAKEAWAYS -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Recap</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <h2 class="slide-title" data-editable>Key <span class="accent">Takeaways</span></h2>
+        <div class="recap-cols">
+          <ul class="bullets tight">
+            <li data-editable>Short-term = message list in graph state; long-term = explicit JSON notes on disk</li>
+            <li data-editable>LangGraph = state + nodes + edges + optional checkpointer</li>
+            <li data-editable>Part A proves a fact survives a new thread via <b>agent_notes.json</b></li>
+          </ul>
+          <ul class="bullets tight">
+            <li data-editable>Multi-agent = specialized nodes wired in a readable pipeline</li>
+            <li data-editable>Ground writers in research output — never trust the model to invent catalog facts</li>
+            <li data-editable>Vectors and RAG arrive in Week 6 — not required for durable memory today</li>
+          </ul>
+        </div>
+      </div>
+      <div style="position:absolute; right:100px; bottom:170px;" aria-hidden="true">
+        <div class="graph-flow">
+          <div class="graph-node"><div class="box">REMEMBER</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node active"><div class="box">RECALL</div></div>
+          <span class="graph-arrow">&rarr;</span>
+          <div class="graph-node"><div class="box">ANSWER</div></div>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">13</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 14: NEXT WEEK -->
+    <section class="slide">
+      <div class="slide-inner">
+        <div class="eyebrow-row">
+          <span class="kicker" data-editable>Next Week</span>
+          <svg class="measure-rule" viewBox="0 0 400 20"><line x1="6" y1="10" x2="394" y2="10" class="mline" marker-start="url(#loopArrowHead)" marker-end="url(#loopArrowHead)"/></svg>
+        </div>
+        <div style="margin-top:100px; max-width:1400px;">
+          <div style="font-family:var(--font-mono); font-size:22px; color:var(--orange); letter-spacing:.2em; margin-bottom:18px;" data-editable>WEEK 06</div>
+          <h2 class="slide-title" style="font-size:100px;" data-editable>Foundations of <span class="accent">RAG &amp; Chatbots</span></h2>
+          <p style="font-size:28px; max-width:1200px; line-height:1.5; opacity:.9;" data-editable>Embeddings, vector search, and retrieval-augmented generation — when document memory needs semantic lookup, not just JSON keys.</p>
+        </div>
+      </div>
+      <div class="titleblock blueprint-frame">
+        <div class="tb-row"><span>DWG NO.</span><b>WK5-C4</b></div>
+        <div class="tb-row"><span>SCALE</span><b>1:1</b></div>
+        <div class="tb-row"><span>REV</span><b>A</b></div>
+        <div class="tb-row"><span>SHEET</span><b><span class="sheet-num">14</span>/<span class="sheet-total">14</span></b></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="deck-controls">
+  <span data-editable>GenAI Foundations / Week 5 / Class 4</span>
+  <span class="dot">&bull;</span>
+  <span id="slideCounter">01 / 14</span>
+</div>
+<a class="nav-btn nav-prev" href="class-3.html">&larr; Class 3</a>
+<a class="nav-btn nav-next" href="../week-6/index.html">Week 6 &rarr;</a>
+
+<script>
+class SlidePresentation {
+  constructor(){
+    this.slides = document.querySelectorAll('.slide');
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.counter = document.getElementById('slideCounter');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupClickAdvance();
+    this.showSlide(0);
+  }
+  setupStageScale(){
+    const scale = () => {
+      const f = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+      const x = (window.innerWidth-1920*f)/2, y = (window.innerHeight-1080*f)/2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale(); window.addEventListener('resize', scale);
+  }
+  setupKeyboardNav(){
+    document.addEventListener('keydown', (e)=>{
+      if (e.target.getAttribute('contenteditable')) return;
+      if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); this.next(); }
+      if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); this.prev(); }
+      if (e.key==='Home') this.showSlide(0);
+      if (e.key==='End') this.showSlide(this.slides.length-1);
+    });
+  }
+  setupTouchNav(){
+    let sx=0;
+    this.stage.addEventListener('touchstart', e=> sx = e.touches[0].clientX, {passive:true});
+    this.stage.addEventListener('touchend', e=>{
+      const dx = e.changedTouches[0].clientX - sx;
+      if (dx < -50) this.next(); if (dx > 50) this.prev();
+    }, {passive:true});
+  }
+  setupClickAdvance(){
+    this.stage.addEventListener('click', (e)=>{
+      if (e.target.closest('a, button, [contenteditable], .no-advance')) return;
+      this.next();
+    });
+  }
+  next(){ this.showSlide(this.current+1); }
+  prev(){ this.showSlide(this.current-1); }
+  showSlide(i){
+    this.current = Math.max(0, Math.min(i, this.slides.length-1));
+    this.slides.forEach((s,idx)=>{ s.classList.toggle('active', idx===this.current); s.classList.toggle('visible', idx===this.current); });
+    if (this.counter) this.counter.textContent = String(this.current+1).padStart(2,'0') + ' / ' + String(this.slides.length).padStart(2,'0');
+  }
+}
+new SlidePresentation();
+
+document.querySelectorAll('.slide').forEach((s,i)=>{
+  const n = s.querySelector('.sheet-num'); if(n) n.textContent = String(i+1).padStart(2,'0');
+  const t = s.querySelector('.sheet-total'); if(t) t.textContent = String(document.querySelectorAll('.slide').length).padStart(2,'0');
+});
+</script>
+
+<script>
+let editMode = false, hideTimeout = null;
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+function setShow(v){ editToggle.classList.toggle('show', v); }
+hotzone.addEventListener('mouseenter', ()=>{ clearTimeout(hideTimeout); setShow(true); });
+hotzone.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+editToggle.addEventListener('mouseenter', ()=> clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', ()=>{ hideTimeout = setTimeout(()=>{ if(!editMode) setShow(false); }, 400); });
+function toggleEdit(){
+  editMode = !editMode;
+  editToggle.classList.toggle('active', editMode);
+  document.querySelectorAll('.slide [data-editable]').forEach(el=> el.setAttribute('contenteditable', editMode ? 'true':'false'));
+  if (!editMode) localStorage.setItem(document.title, document.querySelector('.deck-stage').innerHTML);
+}
+editToggle.addEventListener('click', toggleEdit);
+hotzone.addEventListener('click', toggleEdit);
+document.addEventListener('keydown', (e)=>{ if((e.key==='e'||e.key==='E') && !e.target.getAttribute('contenteditable')) toggleEdit(); });
+(function restore(){ const saved = localStorage.getItem(document.title); if (saved) document.querySelector('.deck-stage').innerHTML = saved; })();
+</script>
+
+</body>
+</html>
