@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Week 5 · Introduction to AI Agents</title>
-<meta name="description" content="Week 5 of Foundations of Generative AI & LLM Applications: what makes an agent an agent, the plan-act-observe loop, and building a simple agent.">
+<meta name="description" content="Week 5 of Foundations of Generative AI & LLM Applications: agents, tool loops, multi-turn memory, and LangGraph long-term memory + multi-agent reporters.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -93,7 +93,7 @@ footer{ margin-top:60px; text-align:center; font-family:var(--font-mono); font-s
   <section class="hero">
     <div class="kicker">Week 5</div>
     <h1>Introduction to <span class="accent">AI Agents</span></h1>
-    <p>Theme: The Blueprint / Loop Schematic. Three classes moving from "what even is an agent" to a full tool-calling loop to a working, multi-turn agent you build yourself.</p>
+    <p>Theme: The Blueprint / Loop Schematic. Four classes from "what even is an agent" through a tool-calling loop and multi-turn agent, then long-term memory and LangGraph.</p>
   </section>
 
   <div class="diagram-row">
@@ -105,7 +105,7 @@ footer{ margin-top:60px; text-align:center; font-family:var(--font-mono); font-s
       <g><circle class="node-circle" cx="199.7" cy="181" r="22"/><text class="node-letter" x="199.7" y="188">A</text><text class="node-caption" x="199.7" y="222">ACT</text></g>
       <g><circle class="node-circle" cx="40.3" cy="181" r="22"/><text class="node-letter" x="40.3" y="188">O</text><text class="node-caption" x="40.3" y="222">OBSERVE</text></g>
     </svg>
-    <p class="diagram-note">The <b>Plan &rarr; Act &rarr; Observe</b> loop is this week's recurring schematic — it evolves as you move through the three classes, from a single highlighted node to the full loop running.</p>
+    <p class="diagram-note">The <b>Plan &rarr; Act &rarr; Observe</b> loop is this week's recurring schematic — it evolves across four classes, ending in long-term notes and LangGraph multi-agent flows.</p>
   </div>
 
   <div class="section-label">// Select a Class</div>
@@ -140,14 +140,25 @@ footer{ margin-top:60px; text-align:center; font-family:var(--font-mono); font-s
         <a class="colab" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-5/class-3.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
       </div>
     </div>
+    <div class="class-card">
+      <span class="cnum">Class 04</span>
+      <h3>Long-Term Memory &amp; LangGraph Agents</h3>
+      <p>JSON notes that survive sessions, a linear LangGraph memory loop, then a multi-agent game reporter (Researcher → Writer).</p>
+      <div class="class-actions">
+        <a href="class-4.html">Open Deck →</a>
+        <a href="class-4.ipynb">Notebook</a>
+        <a class="colab" href="https://colab.research.google.com/github/spravesh1818/lfconnect-genai-b2/blob/main/week-5/class-4.ipynb" target="_blank" rel="noopener">▶ Open in Colab</a>
+      </div>
+    </div>
   </div>
 
   <div class="titleblock-note" style="margin-bottom:24px;">
     Each class pairs a slide deck (<b>class-N.html</b>) with a runnable notebook (<b>class-N.ipynb</b>).
-    Class 1 uses Groq only; Classes 2–3 use LangChain + Groq. Add a Colab secret named <b>GROQ_API_KEY</b> before running live cells.
+    Class 1 uses Groq only; Classes 2–3 use LangChain + Groq; Class 4 uses LangGraph + Groq.
+    Add a Colab secret named <b>GROQ_API_KEY</b> before running live cells.
   </div>
 
-  <div class="titleblock-note">DWG NO. WK5-INDEX &nbsp;&middot;&nbsp; SCALE 1:1 &nbsp;&middot;&nbsp; REV A &nbsp;&middot;&nbsp; 3 SHEETS</div>
+  <div class="titleblock-note">DWG NO. WK5-INDEX &nbsp;&middot;&nbsp; SCALE 1:1 &nbsp;&middot;&nbsp; REV A &nbsp;&middot;&nbsp; 4 SHEETS</div>
 
   <footer>Foundations of Generative AI &amp; LLM Applications — Week 5</footer>
 </div>
